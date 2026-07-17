@@ -82,6 +82,8 @@ Visit `http://localhost:3000`.
 # Backend (from the venv, needs Postgres/Redis running)
 cd apps/api && python -m pytest tests/ -q
 cd apps/worker && python -m pytest tests/ -q
+cd packages/analysis_engine && python -m pytest tests/ -q
+cd packages/embedding_provider && python -m pytest tests/ -q
 
 # Frontend
 cd apps/web && npx vitest run
@@ -103,6 +105,13 @@ cd apps/web && npx tsc --noEmit
    with the code, e.g. *"how do I split a number into pieces?"* — it should still
    cite `src/utils/math.ts`'s `divide` function, proving retrieval is genuinely
    semantic (via real embeddings), not just keyword matching.
+7. Click **Findings**, then **Run analysis** and watch the progress bar. When it
+   completes, 9 real findings should appear (3 bugs, 3 security, 3 performance).
+   Open one to see its evidence/explanation/recommended fix, and try dismissing it
+   with a reason — it should disappear from the default "open" filter.
+8. Back in **Explore files**, open `src/utils/math.ts`, and click **impact** next to
+   the `divide` symbol in the outline — it should show `src/index.ts` as a direct,
+   `confirmed_static` dependent.
 
 ## Regenerating the API client after backend changes
 

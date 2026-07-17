@@ -51,14 +51,14 @@ async def test_architecture_returns_file_nodes_and_subsystems(
     assert response.status_code == 200
     body = response.json()
 
-    assert len(body["nodes"]) == 6
+    assert len(body["nodes"]) == 8
     assert all(n["type"] == "file" for n in body["nodes"])
 
     subsystem_names = {s["name"] for s in body["subsystems"]}
     assert subsystem_names == {"utils", "models", "services", "components", "root"}
 
     utils_subsystem = next(s for s in body["subsystems"] if s["name"] == "utils")
-    assert len(utils_subsystem["file_ids"]) == 2
+    assert len(utils_subsystem["file_ids"]) == 3
 
 
 async def test_architecture_includes_resolved_import_edge(

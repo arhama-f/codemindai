@@ -30,8 +30,10 @@ async def test_list_files_returns_indexed_files(client: AsyncClient, index_repos
     paths = {f["path"] for f in response.json()}
     assert paths == {
         "src/index.ts",
+        "src/config.ts",
         "src/utils/math.ts",
         "src/utils/string.ts",
+        "src/utils/collections.ts",
         "src/models/user.ts",
         "src/services/userService.ts",
         "src/components/UserCard.tsx",
@@ -69,7 +71,7 @@ async def test_get_file_detail_includes_symbols(client: AsyncClient, index_repos
     body = response.json()
     assert "export function divide" in body["content"]
     symbol_names = {s["name"] for s in body["symbols"]}
-    assert symbol_names == {"add", "subtract", "multiply", "divide"}
+    assert symbol_names == {"add", "subtract", "multiply", "divide", "percentageOf"}
 
 
 async def test_search_symbols_case_insensitive_partial_match(client: AsyncClient, index_repository_directly):
@@ -90,7 +92,7 @@ async def test_search_symbols_without_query_returns_all(client: AsyncClient, ind
 
     response = await client.get(f"/api/organizations/{org_id}/repositories/{repo_id}/symbols")
     assert response.status_code == 200
-    assert len(response.json()) == 14
+    assert len(response.json()) == 20
 
 
 async def test_get_summary_returns_repository_and_directory_summaries(

@@ -194,6 +194,7 @@ class SymbolRelationship(UUIDPKMixin, CreatedAtMixin, Base):
     )
     relationship_type: Mapped[str] = mapped_column(String, nullable=False)
     raw_specifier: Mapped[str | None] = mapped_column(String, nullable=True)
+    confidence: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class CodeChunk(UUIDPKMixin, CreatedAtMixin, Base):
@@ -264,3 +265,75 @@ class JobRun(UUIDPKMixin, CreatedAtMixin, Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+
+class AnalysisRun(UUIDPKMixin, CreatedAtMixin, Base):
+    __tablename__ = "analysis_runs"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
+    )
+    repository_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("repositories.id"), nullable=False
+    )
+    repository_index_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("repository_indexes.id"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String,
+        CheckConstraint("status in ('pending','running','completed','failed')"),
+        server_default="pending",
+    )
+    started_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stats: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+
+class Finding(UUIDPKMixin, CreatedAtMixin, Base):
+    __tablename__ = "findings"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
+    )
+    analysis_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("analysis_runs.id"), nullable=False
+    )
+    repository_index_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("repository_indexes.id"), nullable=False
+    )
+    file_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("files.id"), nullable=False
+    )
+    symbol_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("symbols.id"), nullable=True
+    )
+
+    check_id: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(
+        String, CheckConstraint("category in ('bug','security','performance')"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    severity: Mapped[str] = mapped_column(
+        String, CheckConstraint("severity in ('critical','high','medium','low')"), nullable=False
+    )
+    confidence: Mapped[str] = mapped_column(
+        String, CheckConstraint("confidence in ('high','medium','low')"), nullable=False
+    )
+    explanation: Mapped[str] = mapped_column(Text, nullable=False)
+    recommended_fix: Mapped[str] = mapped_column(Text, nullable=False)
+    suggested_test: Mapped[str | None] = mapped_column(Text, nullable=True)
+    execution_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    start_line: Mapped[int] = mapped_column(Integer, nullable=False)
+    end_line: Mapped[int] = mapped_column(Integer, nullable=False)
+    evidence: Mapped[list] = mapped_column(JSONB, nullable=False)
+
+    status: Mapped[str] = mapped_column(
+        String, CheckConstraint("status in ('open','dismissed')"), server_default="open"
+    )
+    dismissed_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    dismissed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    dismissed_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )

@@ -1,5 +1,5 @@
 import tree_sitter_typescript as tsts
-from tree_sitter import Language, Node, Parser
+from tree_sitter import Language, Node, Parser, Tree
 
 from codemind_shared_types.schemas import ParsedFile, ParsedImport, ParsedSymbol
 
@@ -102,6 +102,14 @@ def _extract_import(source: bytes, node: Node) -> ParsedImport | None:
                     imported_names.append(_text(source, ident))
 
     return ParsedImport(specifier=specifier, imported_names=imported_names)
+
+
+def parse_tree(path: str, source: str) -> Tree:
+    """Parses a .ts/.tsx file into a raw tree-sitter Tree, for callers (e.g.
+    analysis_engine) that need to walk statement/expression-level nodes rather
+    than just the top-level symbols parse_file() extracts."""
+    parser = _parser_for(path)
+    return parser.parse(source.encode("utf-8"))
 
 
 def parse_file(path: str, source: str) -> ParsedFile:

@@ -143,16 +143,38 @@ async def index_repository(ctx: dict, *, repository_id: str, job_run_id: str) ->
                 for parsed_import in parsed.imports:
                     resolved_path = resolve_import_path(path, parsed_import.specifier, known_paths)
                     to_file = file_rows.get(resolved_path) if resolved_path else None
-                    session.add(
-                        SymbolRelationship(
-                            organization_id=repository.organization_id,
-                            repository_index_id=repository_index.id,
-                            from_file_id=from_file.id,
-                            to_file_id=to_file.id if to_file else None,
-                            relationship_type="imports",
-                            raw_specifier=parsed_import.specifier,
+                    to_symbols_by_name = {
+                        s.name: s for s in symbols_by_path.get(resolved_path, []) if s.exported
+                    }
+
+                    # One relationship row per imported name so impact analysis can
+                    # find dependents of a specific symbol, not just of a file. A
+                    # side-effect-only import (no named imports) gets one row with
+                    # no symbol resolved.
+                    imported_names = parsed_import.imported_names or [None]
+                    for imported_name in imported_names:
+                        to_symbol = (
+                            to_symbols_by_name.get(imported_name) if imported_name else None
                         )
-                    )
+                        if to_symbol is not None:
+                            confidence = "confirmed_static"
+                        elif to_file is not None:
+                            confidence = "unknown"
+                        else:
+                            confidence = None
+
+                        session.add(
+                            SymbolRelationship(
+                                organization_id=repository.organization_id,
+                                repository_index_id=repository_index.id,
+                                from_file_id=from_file.id,
+                                to_file_id=to_file.id if to_file else None,
+                                to_symbol_id=to_symbol.id if to_symbol else None,
+                                relationship_type="imports",
+                                raw_specifier=parsed_import.specifier,
+                                confidence=confidence,
+                            )
+                        )
             job_run.progress_percent = 65
             await session.commit()
 
@@ -242,7 +264,11 @@ async def index_repository(ctx: dict, *, repository_id: str, job_run_id: str) ->
             repository_index.stats = {
                 "file_count": len(file_rows),
                 "symbol_count": sum(len(v) for v in symbols_by_path.values()),
-                "relationship_count": sum(len(p.imports) for p in parsed_by_path.values()),
+                "relationship_count": sum(
+                    len(parsed_import.imported_names) or 1
+                    for p in parsed_by_path.values()
+                    for parsed_import in p.imports
+                ),
                 "embedding_count": len(all_chunk_rows),
             }
             job_run.status = "completed"

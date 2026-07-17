@@ -21,6 +21,7 @@ class FileListItem(BaseModel):
 
 
 class SymbolSummary(BaseModel):
+    id: UUID
     name: str
     kind: str
     start_line: int
@@ -80,7 +81,9 @@ async def get_file(
         select(Symbol).where(Symbol.file_id == file_id).order_by(Symbol.start_line)
     )
     symbols = [
-        SymbolSummary(name=s.name, kind=s.kind, start_line=s.start_line, end_line=s.end_line)
+        SymbolSummary(
+            id=s.id, name=s.name, kind=s.kind, start_line=s.start_line, end_line=s.end_line
+        )
         for s in symbols_result.scalars().all()
     ]
 

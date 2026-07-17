@@ -15,4 +15,13 @@ export class UserService {
   listUsers(): User[] {
     return Array.from(this.users.values());
   }
+
+  // BUG: swallows the error instead of handling or logging it — planted for
+  // a later bug-detection phase.
+  deleteUser(id: string): boolean {
+    try {
+      this.users.delete(id);
+      return true;
+    } catch (e) {}
+  }
 }

@@ -99,3 +99,25 @@ async def index_repository_directly(db_session: AsyncSession):
         await index_repository(ctx, repository_id=repository_id, job_run_id=job_run_id)
 
     return _run
+
+
+@pytest_asyncio.fixture
+async def analyze_repository_directly(db_session: AsyncSession):
+    """Runs the real analysis pipeline synchronously against the test's own
+    `db_session`, bypassing the real redis-backed arq worker — mirrors
+    `index_repository_directly` above."""
+    from codemind_worker.tasks.analyze_repository import analyze_repository
+
+    class _SingleSessionContextManager:
+        async def __aenter__(self):
+            return db_session
+
+        async def __aexit__(self, *exc_info):
+            return False
+
+    ctx = {"db_sessionmaker": lambda: _SingleSessionContextManager()}
+
+    async def _run(*, repository_id: str, job_run_id: str) -> None:
+        await analyze_repository(ctx, repository_id=repository_id, job_run_id=job_run_id)
+
+    return _run

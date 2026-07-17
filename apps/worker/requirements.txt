@@ -9,3 +9,4 @@ pgvector>=0.2.5
 -e ../../packages/code_parser
 -e ../../packages/ai_orchestrator
 -e ../../packages/embedding_provider
+-e ../../packages/analysis_engine

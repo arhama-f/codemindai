@@ -116,6 +116,12 @@ export default function RepositoryDetailPage() {
             >
               Architecture
             </Link>
+            <Link
+              href={`/orgs/${orgId}/repos/${repoId}/findings`}
+              className="rounded border border-gray-700 px-4 py-2 hover:bg-gray-800"
+            >
+              Findings
+            </Link>
           </section>
         </>
       )}

@@ -1002,6 +1002,364 @@
           }
         }
       }
+    },
+    "/api/organizations/{org_id}/repositories/{repo_id}/analyses": {
+      "post": {
+        "tags": [
+          "findings"
+        ],
+        "summary": "Start Analysis",
+        "operationId": "start_analysis_api_organizations__org_id__repositories__repo_id__analyses_post",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "repo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Repo Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartAnalysisResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{org_id}/repositories/{repo_id}/findings": {
+      "get": {
+        "tags": [
+          "findings"
+        ],
+        "summary": "List Findings",
+        "operationId": "list_findings_api_organizations__org_id__repositories__repo_id__findings_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "repo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Repo Id"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FindingSummary"
+                  },
+                  "title": "Response List Findings Api Organizations  Org Id  Repositories  Repo Id  Findings Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{org_id}/repositories/{repo_id}/findings/{finding_id}": {
+      "get": {
+        "tags": [
+          "findings"
+        ],
+        "summary": "Get Finding",
+        "operationId": "get_finding_api_organizations__org_id__repositories__repo_id__findings__finding_id__get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "repo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Repo Id"
+            }
+          },
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{org_id}/repositories/{repo_id}/findings/{finding_id}/dismiss": {
+      "post": {
+        "tags": [
+          "findings"
+        ],
+        "summary": "Dismiss Finding",
+        "operationId": "dismiss_finding_api_organizations__org_id__repositories__repo_id__findings__finding_id__dismiss_post",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "repo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Repo Id"
+            }
+          },
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DismissFindingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{org_id}/repositories/{repo_id}/symbols/{symbol_id}/impact": {
+      "get": {
+        "tags": [
+          "impact"
+        ],
+        "summary": "Get Symbol Impact",
+        "description": "\"What breaks if I change this?\" \u2014 honestly scoped to file-level blast\nradius (not a true call graph): direct dependents are files that import\nthis exact symbol; transitive dependents are files that import *those*\nfiles, one hop further. `from_symbol_id` isn't populated (would need\nin-body reference resolution), so this can't tell you which *symbol* in a\ndependent file uses the target \u2014 only that the file does.",
+        "operationId": "get_symbol_impact_api_organizations__org_id__repositories__repo_id__symbols__symbol_id__impact_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "repo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Repo Id"
+            }
+          },
+          {
+            "name": "symbol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Symbol Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SymbolImpactResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1238,6 +1596,19 @@
         ],
         "title": "DirectorySummary"
       },
+      "DismissFindingRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "DismissFindingRequest"
+      },
       "FileDetailResponse": {
         "properties": {
           "path": {
@@ -1298,6 +1669,204 @@
         ],
         "title": "FileListItem"
       },
+      "FindingDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "check_id": {
+            "type": "string",
+            "title": "Check Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence"
+          },
+          "file_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "File Id"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "start_line": {
+            "type": "integer",
+            "title": "Start Line"
+          },
+          "end_line": {
+            "type": "integer",
+            "title": "End Line"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "recommended_fix": {
+            "type": "string",
+            "title": "Recommended Fix"
+          },
+          "suggested_test": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Test"
+          },
+          "execution_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Path"
+          },
+          "evidence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "dismissed_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dismissed Reason"
+          },
+          "dismissed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dismissed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "check_id",
+          "category",
+          "title",
+          "severity",
+          "confidence",
+          "file_id",
+          "file_path",
+          "start_line",
+          "end_line",
+          "status",
+          "explanation",
+          "recommended_fix",
+          "suggested_test",
+          "execution_path",
+          "evidence",
+          "dismissed_reason",
+          "dismissed_at"
+        ],
+        "title": "FindingDetail"
+      },
+      "FindingSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "check_id": {
+            "type": "string",
+            "title": "Check Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence"
+          },
+          "file_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "File Id"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "start_line": {
+            "type": "integer",
+            "title": "Start Line"
+          },
+          "end_line": {
+            "type": "integer",
+            "title": "End Line"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "check_id",
+          "category",
+          "title",
+          "severity",
+          "confidence",
+          "file_id",
+          "file_path",
+          "start_line",
+          "end_line",
+          "status"
+        ],
+        "title": "FindingSummary"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1310,6 +1879,41 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ImpactedFile": {
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "File Id"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence"
+          },
+          "raw_specifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Specifier"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_id",
+          "file_path",
+          "confidence"
+        ],
+        "title": "ImpactedFile"
       },
       "InstallationResponse": {
         "properties": {
@@ -1526,6 +2130,29 @@
               }
             ],
             "title": "Latest Index Id"
+          },
+          "latest_analysis_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Analysis Status"
+          },
+          "latest_analysis_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Analysis Id"
           }
         },
         "type": "object",
@@ -1563,6 +2190,20 @@
           "snippet"
         ],
         "title": "RetrievedChunkDTO"
+      },
+      "StartAnalysisResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "StartAnalysisResponse"
       },
       "StartIndexResponse": {
         "properties": {
@@ -1605,6 +2246,46 @@
           "directories"
         ],
         "title": "SummaryResponse"
+      },
+      "SymbolImpactResponse": {
+        "properties": {
+          "symbol_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Symbol Id"
+          },
+          "symbol_name": {
+            "type": "string",
+            "title": "Symbol Name"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "direct_dependent_files": {
+            "items": {
+              "$ref": "#/components/schemas/ImpactedFile"
+            },
+            "type": "array",
+            "title": "Direct Dependent Files"
+          },
+          "transitive_dependent_files": {
+            "items": {
+              "$ref": "#/components/schemas/ImpactedFile"
+            },
+            "type": "array",
+            "title": "Transitive Dependent Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol_id",
+          "symbol_name",
+          "file_path",
+          "direct_dependent_files",
+          "transitive_dependent_files"
+        ],
+        "title": "SymbolImpactResponse"
       },
       "SymbolSearchResult": {
         "properties": {
@@ -1653,6 +2334,11 @@
       },
       "SymbolSummary": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -1672,6 +2358,7 @@
         },
         "type": "object",
         "required": [
+          "id",
           "name",
           "kind",
           "start_line",

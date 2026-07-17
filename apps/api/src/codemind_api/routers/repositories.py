@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from codemind_api.db import get_db
 from codemind_api.deps import get_org_membership
 from codemind_api.providers import get_github_client
+from codemind_api.repository_index_utils import get_latest_analysis_run
 from codemind_github_client import GitHubClient
 from codemind_shared_types.models import GithubInstallation, Repository, RepositoryIndex
 
@@ -24,6 +25,8 @@ class RepositoryResponse(BaseModel):
     default_branch: str
     latest_index_status: str | None = None
     latest_index_id: UUID | None = None
+    latest_analysis_status: str | None = None
+    latest_analysis_id: UUID | None = None
 
 
 async def _latest_index(db: AsyncSession, repository_id: UUID) -> RepositoryIndex | None:
@@ -38,12 +41,15 @@ async def _latest_index(db: AsyncSession, repository_id: UUID) -> RepositoryInde
 
 async def _to_response(db: AsyncSession, repository: Repository) -> RepositoryResponse:
     latest_index = await _latest_index(db, repository.id)
+    latest_analysis = await get_latest_analysis_run(db, repository.id)
     return RepositoryResponse(
         id=repository.id,
         full_name=repository.full_name,
         default_branch=repository.default_branch,
         latest_index_status=latest_index.status if latest_index else None,
         latest_index_id=latest_index.id if latest_index else None,
+        latest_analysis_status=latest_analysis.status if latest_analysis else None,
+        latest_analysis_id=latest_analysis.id if latest_analysis else None,
     )
 
 

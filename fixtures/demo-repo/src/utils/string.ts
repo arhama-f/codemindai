@@ -12,3 +12,10 @@ export function slugify(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 }
+
+// BUG: the console.log below the return statement can never execute —
+// planted for a later bug-detection phase.
+export function truncate(value: string, maxLength: number): string {
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
+  console.log("truncated", value);
+}

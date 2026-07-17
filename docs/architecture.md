@@ -1,10 +1,10 @@
 # CodeMind AI — Architecture
 
-This document covers the vertical slice (spec section 27) plus a phase 2 increment:
-monorepo scaffold → mock GitHub connect → indexing pipeline → mock AI summaries →
-architecture graph → real embedding-based Q&A → richer source explorer. It
-intentionally does **not** cover the full 25-section product spec — see
-[Deferred](#deferred-to-later-phases) below for what's out of scope and why.
+This document covers the vertical slice (spec section 27) plus two increments: phase 2
+(architecture graph, real embedding-based Q&A, richer source explorer) and phase 3
+(deterministic bug/security/performance detection, a findings interface, dependency
+impact analysis). It intentionally does **not** cover the full 25-section product
+spec — see [Deferred](#deferred-to-later-phases) below for what's out of scope and why.
 
 ## Stack
 
@@ -33,6 +33,7 @@ codemindai/
 │   ├── code_parser/          # tree-sitter TS/TSX parsing, chunking, import resolution
 │   ├── ai_orchestrator/      # AIProvider interface + MockAIProvider
 │   ├── embedding_provider/   # EmbeddingProvider interface + real sentence-transformers impl
+│   ├── analysis_engine/      # tree-sitter based bug/security/performance checks
 │   └── api-client/           # generated OpenAPI TS client for the frontend
 ├── apps/
 │   ├── api/                  # FastAPI app (routers, auth, deps)
@@ -47,13 +48,19 @@ inline in route handlers, per the spec's separation-of-concerns rule.
 
 ## Database
 
-15 tables across two migrations: the initial schema (`users`, `organizations`,
+17 tables across four migrations: the initial schema (`users`, `organizations`,
 `organization_members`, `github_installations`, `repositories`, `branches`,
 `commits`, `repository_indexes`, `files`, `symbols`, `symbol_relationships`,
-`code_chunks`, `embeddings`, `repository_summaries`, `job_runs`), plus a follow-up
+`code_chunks`, `embeddings`, `repository_summaries`, `job_runs`); a follow-up
 migration (`786118880f25_embeddings_384_dim.py`) that changed `embeddings.vector`
 from a placeholder `VECTOR(1536)` (never written to) to `VECTOR(384)` to match the
-real embedding model actually chosen. Every table a route queries directly carries
+real embedding model actually chosen; a third migration adding `analysis_runs` and
+`findings` (findings' `evidence` is a JSONB column, not a `finding_evidence` join
+table — every check produces 1-2 fixed evidence locations known at detection time,
+so a join table would buy nothing yet); and a fourth adding
+`symbol_relationships.confidence` (`confirmed_static` | `unknown`, or `NULL` for
+external/unresolved imports) for dependency impact analysis. Every table a route
+queries directly carries
 `organization_id` so tenant isolation is a flat `WHERE organization_id = :org_id`
 rather than a multi-hop join. `status`/`kind`/`relationship_type` columns are
 `VARCHAR` + `CHECK` (not native `ENUM`) so later phases can add new values without an
@@ -166,6 +173,70 @@ deterministic grid layout keyed by subsystem — no `dagre`/`elkjs` — since a 
 demo corpus doesn't need real graph layout; that's flagged as a real-scale TODO in
 code.
 
+## Bug/security/performance detection (`packages/analysis_engine`)
+
+Nine deterministic, tree-sitter based static checks — no AI/LLM call involved in
+detection itself (matching "AI should enrich deterministic findings, not replace
+reliable scanners"). Each check is a plain function `check(path, source, root_node,
+symbols) -> list[FindingDraftDTO]`; `codemind_analysis_engine.analyze_file()` parses
+once (`code_parser.parse_tree()`) and runs every check against the same tree.
+`packages/analysis_engine/src/codemind_analysis_engine/traversal.py` provides the
+shared primitives (`find_all`, `enclosing_function`, `node_text`, `line_range`) that
+didn't exist before this round — `code_parser` previously only walked top-level
+declarations, never into function bodies/expressions.
+
+- **Bugs**: `unsafe-division` (binary `/`/`%` by an identifier with no visible
+  zero-guard in the enclosing function — fires on the repo's original planted
+  `divide()` bug), `empty-catch-block` (empty `catch` body),
+  `unreachable-code-after-return` (statements following a `return`/`throw` in the
+  same block).
+- **Security**: `hardcoded-secret` (a `const`/`let` whose name matches
+  `api[_-]?key|secret|token|password|access[_-]?key` assigned a string literal, not
+  `process.env.X`), `unsafe-dangerously-set-inner-html` (JSX `dangerouslySetInnerHTML`
+  usage), `sensitive-data-logging` (`console.*()` call with a secret-sounding
+  argument name).
+- **Performance**: `nested-loop-quadratic` (a loop nested inside another loop),
+  `array-scan-in-loop` (`.includes()`/`.indexOf()`/`.find()`/`.findIndex()` called
+  inside a loop body), `array-rebuild-in-loop` (`x = [...x, ...y]` inside a loop
+  instead of pushing in place).
+
+Every check has a real, intentionally-planted trigger in `fixtures/demo-repo`
+(`config.ts`, `utils/collections.ts`, and small additions to `math.ts`,
+`userService.ts`, `utils/string.ts`, `UserCard.tsx`) — see
+`packages/analysis_engine/tests/` for exact-line-number assertions per check, and
+`apps/worker/tests/test_analyze_repository.py` for the full pipeline asserting all 9
+fire on the real fixture repo with zero false positives (e.g. a companion
+`percentageOf()` with a proper zero-guard next to `divide()` proves the division
+check doesn't just fire on every division).
+
+Analysis is a **separate, user-triggered job** (`POST .../analyses` → arq
+`analyze_repository` task), not an automatic step of indexing — it reuses the
+existing job-type-agnostic `GET /jobs/{id}` + SSE infrastructure via `JobRun.job_type`,
+and only needs a DB session (no GitHub/AI/embedding provider), reading already-persisted
+`files`/`symbols` from the latest completed index. Findings are grouped under an
+`AnalysisRun`; the findings list/detail/dismiss endpoints
+(`apps/api/src/codemind_api/routers/findings.py`) always read the latest *completed*
+run. Explanation/fix/test text are plain f-string templates built from each check's
+own evidence — no `AIProvider` call in this round (see Deferred).
+
+## Dependency impact analysis (`apps/api/src/codemind_api/routers/impact.py`)
+
+`GET .../symbols/{symbol_id}/impact` answers "what breaks if I change this?" —
+honestly scoped to **file-level blast radius**, not a true call graph. The indexing
+pipeline now resolves `symbol_relationships.to_symbol_id` (previously always `NULL`):
+for each imported name, it looks up a same-named exported top-level symbol in the
+resolved target file, tagging the relationship `confirmed_static` if found, `unknown`
+if the file resolved but no matching export was found (e.g. default export/aliasing),
+or leaving `confidence` `NULL` if the import target is external/unresolved. Because a
+single import statement can name multiple symbols, one relationship row is now
+created per imported name (previously one per import statement) — the architecture
+graph endpoint dedupes these back down to one edge per (source, target) file pair so
+it isn't affected. The impact endpoint returns direct dependents (files whose
+`to_symbol_id` matches) and transitive dependents (files that import *those* files,
+one hop further); `from_symbol_id` is deliberately left unpopulated (would need
+in-body reference/usage resolution, a materially larger feature), so results are
+named `direct_dependent_files`/`transitive_dependent_files`, not `..._symbols`.
+
 ## Live job progress
 
 `GET /api/organizations/{org_id}/jobs/{job_id}/events` is a Server-Sent Events stream
@@ -187,9 +258,23 @@ Documented explicitly so it's clear this is scope, not an oversight:
   `subsystems` metadata is forward-compatible with adding this later.
 - One node per external package instead of one shared `"external"` node — revisit
   once a real multi-hundred-file repo makes node-count an actual problem.
-- Bug/security/performance scanners, test generation — phases 3–5. The fixture repo's
-  planted `divide()` bug (no zero-check) exists for this later phase; nothing detects
-  it yet.
+- Test generation, PR review, proposed-patch generation (`POST /findings/{id}/propose-fix`)
+  — spec phases 4-5; nothing here should fake a diff.
+- Symbol-granularity (`from_symbol_id`) call-graph dependency impact — needs in-body
+  reference/usage resolution, a materially larger parser feature; the impact endpoint
+  is honestly scoped to file-level blast radius rooted at one exported symbol.
+- `probable_dynamic` relationship classification — the parser doesn't see dynamic
+  `require()`/computed `import()` at all, so a bucket that could never fire would be
+  fabricated, not real.
+- DB/network-layer checks (N+1 queries, missing caching, SSRF, path traversal, SQL
+  injection) — the TS demo fixture has no DB/HTTP/filesystem-access code to genuinely
+  trigger these; faking them would mean synthetic code paths that never exist in the
+  actual served repo.
+- `AIProvider`-based finding enrichment (e.g. an `explain_finding()` method) — the 9
+  checks' explanation/fix/test text are plain templates built from evidence; wiring in
+  real LLM enrichment is a clean future addition, not built this round.
+- Multi-run findings history UI — the schema supports it (`analysis_run_id` FK on
+  `findings`), but the findings list defaults to the latest run only.
 - ANN vector index (`ivfflat`/`hnsw`) — harmful/meaningless at demo-corpus row
   counts; flagged for when real repo scale exists.
 - Making `answer_repository_question` (the LLM half of `/ask`) real — only

@@ -38,7 +38,7 @@ export default function FileDetailPage() {
         <div className="flex gap-6">
           <aside className="w-48 shrink-0">
             <h2 className="mb-2 text-sm font-medium text-gray-500">Symbols</h2>
-            <SymbolOutline symbols={fileQuery.data.symbols} />
+            <SymbolOutline symbols={fileQuery.data.symbols} orgId={orgId} repoId={repoId} />
           </aside>
           <div className="min-w-0 flex-1">
             <SourceViewer

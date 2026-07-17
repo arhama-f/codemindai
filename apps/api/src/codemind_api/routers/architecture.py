@@ -97,30 +97,29 @@ async def get_architecture(
     )
     relationships = relationships_result.scalars().all()
 
-    edges: list[ArchitectureEdge] = []
+    # A single import statement can now produce multiple SymbolRelationship
+    # rows (one per imported name, for dependency-impact lookups) — dedupe
+    # back down to one edge per (source, target) pair for the graph.
+    edges_by_key: dict[tuple[str, str, str], ArchitectureEdge] = {}
     has_external = False
     for rel in relationships:
         if rel.to_file_id is not None and rel.to_file_id in file_id_by_id:
-            edges.append(
-                ArchitectureEdge(
-                    id=str(rel.id),
-                    source=str(rel.from_file_id),
-                    target=str(rel.to_file_id),
-                    kind="resolved",
-                    raw_specifier=rel.raw_specifier,
-                )
-            )
+            source, target, kind = str(rel.from_file_id), str(rel.to_file_id), "resolved"
         else:
             has_external = True
-            edges.append(
-                ArchitectureEdge(
-                    id=str(rel.id),
-                    source=str(rel.from_file_id),
-                    target=EXTERNAL_NODE_ID,
-                    kind="external",
-                    raw_specifier=rel.raw_specifier,
-                )
+            source, target, kind = str(rel.from_file_id), EXTERNAL_NODE_ID, "external"
+
+        key = (source, target, kind)
+        if key not in edges_by_key:
+            edges_by_key[key] = ArchitectureEdge(
+                id=f"{source}:{target}:{kind}",
+                source=source,
+                target=target,
+                kind=kind,
+                raw_specifier=rel.raw_specifier,
             )
+
+    edges = list(edges_by_key.values())
 
     if has_external:
         nodes.append(

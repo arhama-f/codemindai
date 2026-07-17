@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from codemind_code_parser import parse_file
+from codemind_code_parser import parse_file, parse_tree
 
 DEMO_REPO_SRC = Path(__file__).resolve().parents[3] / "fixtures" / "demo-repo" / "src"
 
@@ -9,7 +9,7 @@ def _read(relative_path: str) -> str:
     return (DEMO_REPO_SRC / relative_path).read_text()
 
 
-def test_math_ts_extracts_four_exported_functions():
+def test_math_ts_extracts_five_exported_functions():
     parsed = parse_file("src/utils/math.ts", _read("utils/math.ts"))
 
     assert parsed.imports == []
@@ -18,6 +18,7 @@ def test_math_ts_extracts_four_exported_functions():
         ("subtract", "function", 5, 7, True),
         ("multiply", "function", 9, 11, True),
         ("divide", "function", 14, 16, True),
+        ("percentageOf", "function", 18, 23, True),
     ]
 
 
@@ -35,15 +36,16 @@ def test_user_service_ts_extracts_class_with_methods_and_import():
     assert len(by_kind["class"]) == 1
     class_symbol = by_kind["class"][0]
     assert class_symbol.name == "UserService"
-    assert (class_symbol.start_line, class_symbol.end_line) == (3, 18)
+    assert (class_symbol.start_line, class_symbol.end_line) == (3, 27)
     assert class_symbol.exported is True
 
     method_names = [m.name for m in by_kind["method"]]
-    assert method_names == ["createUser", "getUserById", "listUsers"]
+    assert method_names == ["createUser", "getUserById", "listUsers", "deleteUser"]
     assert [(m.start_line, m.end_line) for m in by_kind["method"]] == [
         (6, 9),
         (11, 13),
         (15, 17),
+        (21, 26),
     ]
 
 
@@ -67,6 +69,14 @@ def test_index_ts_extracts_all_import_specifiers():
         ("./models/user", ["User"]),
         ("./services/userService", ["UserService"]),
     ]
+
+
+def test_parse_tree_returns_raw_tree_sitter_tree():
+    tree = parse_tree("src/utils/math.ts", _read("utils/math.ts"))
+
+    assert tree.root_node.type == "program"
+    function_nodes = [c for c in tree.root_node.children if c.type == "export_statement"]
+    assert len(function_nodes) == 5
 
 
 def test_user_card_tsx_parses_without_error():

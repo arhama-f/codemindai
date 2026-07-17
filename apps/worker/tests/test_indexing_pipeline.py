@@ -63,7 +63,7 @@ async def test_index_repository_completes_and_populates_everything(db_session, w
     )
     repository_index = index_result.scalar_one()
     assert repository_index.status == "completed"
-    assert repository_index.stats["file_count"] == 6
+    assert repository_index.stats["file_count"] == 8
 
     files_result = await db_session.execute(
         select(File).where(File.repository_index_id == repository_index.id)
@@ -71,8 +71,10 @@ async def test_index_repository_completes_and_populates_everything(db_session, w
     files_by_path = {f.path: f for f in files_result.scalars().all()}
     assert set(files_by_path.keys()) == {
         "src/index.ts",
+        "src/config.ts",
         "src/utils/math.ts",
         "src/utils/string.ts",
+        "src/utils/collections.ts",
         "src/models/user.ts",
         "src/services/userService.ts",
         "src/components/UserCard.tsx",
@@ -82,7 +84,7 @@ async def test_index_repository_completes_and_populates_everything(db_session, w
         select(Symbol).where(Symbol.file_id == files_by_path["src/utils/math.ts"].id)
     )
     math_symbols = {s.name: s for s in symbols_result.scalars().all()}
-    assert set(math_symbols.keys()) == {"add", "subtract", "multiply", "divide"}
+    assert set(math_symbols.keys()) == {"add", "subtract", "multiply", "divide", "percentageOf"}
     assert math_symbols["divide"].start_line == 14
     assert math_symbols["divide"].end_line == 16
 
@@ -94,6 +96,14 @@ async def test_index_repository_completes_and_populates_everything(db_session, w
     relationships = relationships_result.scalars().all()
     resolved_targets = {r.to_file_id for r in relationships if r.to_file_id is not None}
     assert files_by_path["src/utils/math.ts"].id in resolved_targets
+
+    divide_relationship = next(
+        r
+        for r in relationships
+        if r.to_file_id == files_by_path["src/utils/math.ts"].id
+        and r.to_symbol_id == math_symbols["divide"].id
+    )
+    assert divide_relationship.confidence == "confirmed_static"
 
     chunks_result = await db_session.execute(
         select(CodeChunk).where(CodeChunk.repository_index_id == repository_index.id)

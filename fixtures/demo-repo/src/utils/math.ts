@@ -14,3 +14,10 @@ export function multiply(a: number, b: number): number {
 export function divide(a: number, b: number): number {
   return a / b;
 }
+
+export function percentageOf(part: number, whole: number): number {
+  if (whole === 0) {
+    return 0;
+  }
+  return (part / whole) * 100;
+}

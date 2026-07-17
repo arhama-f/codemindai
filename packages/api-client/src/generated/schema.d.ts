@@ -346,6 +346,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/organizations/{org_id}/repositories/{repo_id}/analyses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Analysis */
+        post: operations["start_analysis_api_organizations__org_id__repositories__repo_id__analyses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/organizations/{org_id}/repositories/{repo_id}/findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Findings */
+        get: operations["list_findings_api_organizations__org_id__repositories__repo_id__findings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/organizations/{org_id}/repositories/{repo_id}/findings/{finding_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Finding */
+        get: operations["get_finding_api_organizations__org_id__repositories__repo_id__findings__finding_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/organizations/{org_id}/repositories/{repo_id}/findings/{finding_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss Finding */
+        post: operations["dismiss_finding_api_organizations__org_id__repositories__repo_id__findings__finding_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/organizations/{org_id}/repositories/{repo_id}/symbols/{symbol_id}/impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Symbol Impact
+         * @description "What breaks if I change this?" — honestly scoped to file-level blast
+         *     radius (not a true call graph): direct dependents are files that import
+         *     this exact symbol; transitive dependents are files that import *those*
+         *     files, one hop further. `from_symbol_id` isn't populated (would need
+         *     in-body reference resolution), so this can't tell you which *symbol* in a
+         *     dependent file uses the target — only that the file does.
+         */
+        get: operations["get_symbol_impact_api_organizations__org_id__repositories__repo_id__symbols__symbol_id__impact_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -428,6 +521,11 @@ export interface components {
             /** Summary */
             summary: string;
         };
+        /** DismissFindingRequest */
+        DismissFindingRequest: {
+            /** Reason */
+            reason: string;
+        };
         /** FileDetailResponse */
         FileDetailResponse: {
             /** Path */
@@ -453,10 +551,102 @@ export interface components {
             /** Size Bytes */
             size_bytes: number;
         };
+        /** FindingDetail */
+        FindingDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Check Id */
+            check_id: string;
+            /** Category */
+            category: string;
+            /** Title */
+            title: string;
+            /** Severity */
+            severity: string;
+            /** Confidence */
+            confidence: string;
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /** File Path */
+            file_path: string;
+            /** Start Line */
+            start_line: number;
+            /** End Line */
+            end_line: number;
+            /** Status */
+            status: string;
+            /** Explanation */
+            explanation: string;
+            /** Recommended Fix */
+            recommended_fix: string;
+            /** Suggested Test */
+            suggested_test: string | null;
+            /** Execution Path */
+            execution_path: string | null;
+            /** Evidence */
+            evidence: {
+                [key: string]: unknown;
+            }[];
+            /** Dismissed Reason */
+            dismissed_reason: string | null;
+            /** Dismissed At */
+            dismissed_at: string | null;
+        };
+        /** FindingSummary */
+        FindingSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Check Id */
+            check_id: string;
+            /** Category */
+            category: string;
+            /** Title */
+            title: string;
+            /** Severity */
+            severity: string;
+            /** Confidence */
+            confidence: string;
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /** File Path */
+            file_path: string;
+            /** Start Line */
+            start_line: number;
+            /** End Line */
+            end_line: number;
+            /** Status */
+            status: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** ImpactedFile */
+        ImpactedFile: {
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /** File Path */
+            file_path: string;
+            /** Confidence */
+            confidence: string;
+            /** Raw Specifier */
+            raw_specifier?: string | null;
         };
         /** InstallationResponse */
         InstallationResponse: {
@@ -551,6 +741,10 @@ export interface components {
             latest_index_status?: string | null;
             /** Latest Index Id */
             latest_index_id?: string | null;
+            /** Latest Analysis Status */
+            latest_analysis_status?: string | null;
+            /** Latest Analysis Id */
+            latest_analysis_id?: string | null;
         };
         /** RetrievedChunkDTO */
         RetrievedChunkDTO: {
@@ -562,6 +756,14 @@ export interface components {
             end_line: number;
             /** Snippet */
             snippet: string;
+        };
+        /** StartAnalysisResponse */
+        StartAnalysisResponse: {
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
         };
         /** StartIndexResponse */
         StartIndexResponse: {
@@ -577,6 +779,22 @@ export interface components {
             repository_summary: string | null;
             /** Directories */
             directories: components["schemas"]["DirectorySummary"][];
+        };
+        /** SymbolImpactResponse */
+        SymbolImpactResponse: {
+            /**
+             * Symbol Id
+             * Format: uuid
+             */
+            symbol_id: string;
+            /** Symbol Name */
+            symbol_name: string;
+            /** File Path */
+            file_path: string;
+            /** Direct Dependent Files */
+            direct_dependent_files: components["schemas"]["ImpactedFile"][];
+            /** Transitive Dependent Files */
+            transitive_dependent_files: components["schemas"]["ImpactedFile"][];
         };
         /** SymbolSearchResult */
         SymbolSearchResult: {
@@ -603,6 +821,11 @@ export interface components {
         };
         /** SymbolSummary */
         SymbolSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
             /** Name */
             name: string;
             /** Kind */
@@ -1298,6 +1521,177 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ArchitectureResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_analysis_api_organizations__org_id__repositories__repo_id__analyses_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                repo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartAnalysisResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_findings_api_organizations__org_id__repositories__repo_id__findings_get: {
+        parameters: {
+            query?: {
+                category?: string | null;
+                severity?: string | null;
+                status?: string | null;
+            };
+            header?: never;
+            path: {
+                org_id: string;
+                repo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FindingSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_finding_api_organizations__org_id__repositories__repo_id__findings__finding_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                repo_id: string;
+                finding_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FindingDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_finding_api_organizations__org_id__repositories__repo_id__findings__finding_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                repo_id: string;
+                finding_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissFindingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FindingDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_symbol_impact_api_organizations__org_id__repositories__repo_id__symbols__symbol_id__impact_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                repo_id: string;
+                symbol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SymbolImpactResponse"];
                 };
             };
             /** @description Validation Error */

@@ -88,3 +88,29 @@ class RetrievedChunkDTO(BaseModel):
     start_line: int
     end_line: int
     snippet: str
+
+
+# --- Analysis engine DTOs ---
+
+
+class FindingEvidenceDTO(BaseModel):
+    file_path: str
+    start_line: int
+    end_line: int
+    snippet: str
+
+
+class FindingDraftDTO(BaseModel):
+    check_id: str
+    category: str
+    title: str
+    severity: str
+    confidence: str
+    explanation: str
+    recommended_fix: str
+    suggested_test: str | None = None
+    execution_path: str | None = None
+    file_path: str
+    start_line: int
+    end_line: int
+    evidence: list[FindingEvidenceDTO]
