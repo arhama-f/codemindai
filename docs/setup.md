@@ -112,6 +112,37 @@ cd apps/web && npx tsc --noEmit
 8. Back in **Explore files**, open `src/utils/math.ts`, and click **impact** next to
    the `divide` symbol in the outline — it should show `src/index.ts` as a direct,
    `confirmed_static` dependent.
+9. On a finding's detail page, click **Propose fix** — a mock-generated explanation
+   and a side-by-side original/proposed diff should appear. Click **Publish as draft
+   PR**, then **Confirm publish** — without real credentials configured (see below),
+   this correctly shows *"No publish target configured"* rather than silently
+   succeeding.
+
+## Real credentials for propose-fix / publish (optional)
+
+By default, propose-fix uses `MockAIProvider` and publish uses `MockGitHubWriteClient`
+— nothing leaves your machine. To exercise the real Claude API and a real GitHub
+repo, set these in `apps/api/.env` (create it if it doesn't exist) and restart the
+API server:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-...
+GITHUB_PAT=ghp_...                # fine-grained PAT with Contents: Read and write
+GITHUB_TARGET_OWNER=your-username
+GITHUB_TARGET_REPO=your-test-repo
+GITHUB_TARGET_BASE_BRANCH=main    # optional, defaults to "main"
+GITHUB_TARGET_PATH_PREFIX=        # optional, prepended to indexed paths (e.g. "docs/" if the
+                                   # target repo has the mirrored source under a subdirectory)
+```
+
+`GITHUB_TARGET_REPO` must be seeded with content matching `fixtures/demo-repo/src`
+(same file paths/content, optionally under `GITHUB_TARGET_PATH_PREFIX`) — the
+publish endpoint fetches the file from this real repo and 409s if its content
+doesn't match what the fix was generated from. This is never exercised by the
+automated test suite; treat it as a manual, one-off check — publishing creates a
+real branch and opens a real draft PR. (Verified end-to-end against
+`arhama-f/codemindai` itself using `GITHUB_TARGET_PATH_PREFIX=fixtures/demo-repo/`,
+since that repo's own fixture directory already mirrors the indexed content.)
 
 ## Regenerating the API client after backend changes
 
@@ -127,5 +158,7 @@ cd ../../packages/api-client && npm run generate
 - No Dockerfiles for `apps/api`/`apps/worker`/`apps/web` yet — they run natively.
 - No committed browser E2E test suite — the onboarding→ask flow was verified with a
   one-off local Playwright script during development, not a repo-committed test.
-- Mock GitHub/AI providers only — see `docs/architecture.md` for what's deferred and
-  why.
+- Mock GitHub/AI providers by default — real `ClaudeAIProvider`/`PATGitHubWriteClient`
+  are wired in but only used for `propose_fix`/publish, and only when real
+  credentials are configured (see "Real credentials" above). See
+  `docs/architecture.md` for what else is deferred and why.

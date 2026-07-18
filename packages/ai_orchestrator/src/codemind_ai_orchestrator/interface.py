@@ -2,7 +2,9 @@ from abc import ABC, abstractmethod
 
 from codemind_shared_types.schemas import (
     FileSummaryDTO,
+    FindingDetailDTO,
     ParsedSymbol,
+    ProposedFixDTO,
     RetrievedChunkDTO,
     SubsystemDTO,
 )
@@ -26,3 +28,8 @@ class AIProvider(ABC):
     async def answer_repository_question(
         self, *, question: str, citations: list[RetrievedChunkDTO]
     ) -> str: ...
+
+    @abstractmethod
+    async def propose_fix(
+        self, *, finding: FindingDetailDTO, file_content: str
+    ) -> ProposedFixDTO: ...

@@ -1,7 +1,9 @@
 from codemind_ai_orchestrator.interface import AIProvider
 from codemind_shared_types.schemas import (
     FileSummaryDTO,
+    FindingDetailDTO,
     ParsedSymbol,
+    ProposedFixDTO,
     RetrievedChunkDTO,
     SubsystemDTO,
 )
@@ -69,3 +71,21 @@ class MockAIProvider(AIProvider):
 
         closing = f'These are the most relevant locations found for: "{question}".'
         return " ".join(sentences) + " " + closing
+
+    async def propose_fix(
+        self, *, finding: FindingDetailDTO, file_content: str
+    ) -> ProposedFixDTO:
+        explanation = (
+            f"Mock proposed fix for `{finding.check_id}` ({finding.category}/{finding.severity}): "
+            f"{finding.recommended_fix}"
+        )
+        marker = (
+            f"// TODO(codemind): placeholder fix for finding '{finding.check_id}' — "
+            "mock provider does not modify code semantics.\n"
+        )
+        return ProposedFixDTO(
+            explanation=explanation,
+            updated_file_content=marker + file_content,
+            test_file_path=None,
+            test_file_content=None,
+        )

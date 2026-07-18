@@ -1,9 +1,10 @@
 # CodeMind AI — Architecture
 
-This document covers the vertical slice (spec section 27) plus two increments: phase 2
-(architecture graph, real embedding-based Q&A, richer source explorer) and phase 3
+This document covers the vertical slice (spec section 27) plus three increments: phase 2
+(architecture graph, real embedding-based Q&A, richer source explorer), phase 3
 (deterministic bug/security/performance detection, a findings interface, dependency
-impact analysis). It intentionally does **not** cover the full 25-section product
+impact analysis), and phase 4 (propose-fix generation and publishing a fix as a draft
+GitHub pull request). It intentionally does **not** cover the full 25-section product
 spec — see [Deferred](#deferred-to-later-phases) below for what's out of scope and why.
 
 ## Stack
@@ -29,9 +30,9 @@ codemindai/
 ├── fixtures/demo-repo/       # bundled demo TS repo served by MockGitHubClient
 ├── packages/
 │   ├── shared_types/         # SQLAlchemy models + cross-service Pydantic DTOs
-│   ├── github_client/        # GitHubClient interface + MockGitHubClient
+│   ├── github_client/        # GitHubClient (read) + GitHubWriteClient (write) + Mock/PAT impls
 │   ├── code_parser/          # tree-sitter TS/TSX parsing, chunking, import resolution
-│   ├── ai_orchestrator/      # AIProvider interface + MockAIProvider
+│   ├── ai_orchestrator/      # AIProvider interface + Mock/Claude impls
 │   ├── embedding_provider/   # EmbeddingProvider interface + real sentence-transformers impl
 │   ├── analysis_engine/      # tree-sitter based bug/security/performance checks
 │   └── api-client/           # generated OpenAPI TS client for the frontend
@@ -48,7 +49,7 @@ inline in route handlers, per the spec's separation-of-concerns rule.
 
 ## Database
 
-17 tables across four migrations: the initial schema (`users`, `organizations`,
+18 tables across five migrations: the initial schema (`users`, `organizations`,
 `organization_members`, `github_installations`, `repositories`, `branches`,
 `commits`, `repository_indexes`, `files`, `symbols`, `symbol_relationships`,
 `code_chunks`, `embeddings`, `repository_summaries`, `job_runs`); a follow-up
@@ -57,10 +58,15 @@ from a placeholder `VECTOR(1536)` (never written to) to `VECTOR(384)` to match t
 real embedding model actually chosen; a third migration adding `analysis_runs` and
 `findings` (findings' `evidence` is a JSONB column, not a `finding_evidence` join
 table — every check produces 1-2 fixed evidence locations known at detection time,
-so a join table would buy nothing yet); and a fourth adding
+so a join table would buy nothing yet); a fourth adding
 `symbol_relationships.confidence` (`confirmed_static` | `unknown`, or `NULL` for
-external/unresolved imports) for dependency impact analysis. Every table a route
-queries directly carries
+external/unresolved imports) for dependency impact analysis; and a fifth
+(`d5b2e9f1a4c7_proposed_changes.py`) adding `proposed_changes` for phase 4's
+propose-fix workflow — it deliberately has no `original_content`/`file_path`
+columns, joining through `file_id` → `files` for both instead, since `File.content`/
+`File.path` are already immutable once indexed (same "don't duplicate source of
+truth" reasoning as `findings.evidence`). Every table a route queries directly
+carries
 `organization_id` so tenant isolation is a flat `WHERE organization_id = :org_id`
 rather than a multi-hop join. `status`/`kind`/`relationship_type` columns are
 `VARCHAR` + `CHECK` (not native `ENUM`) so later phases can add new values without an
@@ -77,14 +83,28 @@ hardcoded installation/repo, reading the bundled fixture repo from disk with a f
 synthetic commit SHA/timestamp (deterministic for tests).
 
 **`AIProvider`** (`packages/ai_orchestrator`) — `summarize_file`,
-`summarize_directory`, `identify_subsystems`, `answer_repository_question`.
-`MockAIProvider` is fully deterministic/template-based (counts and names only, never
-timestamps or randomness) so tests assert exact strings. `identify_subsystems` is
-now wired into the architecture graph endpoint (its first caller) — it groups files
-by top-level directory under `src/`, used for node color-coding/clustering.
-`answer_repository_question` (the LLM half of `/ask`) is still `MockAIProvider`'s
-deterministic template — only *retrieval* became real this round, not answer
-composition; that's an explicit scope boundary, not an oversight.
+`summarize_directory`, `identify_subsystems`, `answer_repository_question`,
+`propose_fix`. `MockAIProvider` is fully deterministic/template-based (counts and
+names only, never timestamps or randomness) so tests assert exact strings.
+`identify_subsystems` is wired into the architecture graph endpoint; `propose_fix`
+is wired into the propose-fix endpoint (see below). `answer_repository_question`
+(the LLM half of `/ask`) is still `MockAIProvider`'s deterministic template — only
+*retrieval* became real in phase 2, not answer composition; that's an explicit
+scope boundary, not an oversight. `ClaudeAIProvider` (phase 4) implements only
+`propose_fix` for real — a real LLM call needs an actual model, so it's the one
+`AIProvider` method phase 4 chose to make real; its other four methods raise
+`NotImplementedError` rather than fake a model call, and indexing/summarization
+stays on `MockAIProvider` this round (see the propose-fix section below).
+
+**`GitHubWriteClient`** (`packages/github_client`) — a separate interface from the
+read-only `GitHubClient` above, since indexing (read) and propose-fix/publish
+(write) are independently swappable and the read path shouldn't need write
+credentials. `get_file`, `create_branch`, `update_file` (sha-based optimistic
+concurrency; `sha=None` creates a new file, matching GitHub's real contents API),
+`create_pull_request`. `MockGitHubWriteClient` is an in-memory dict keyed by
+`(owner, repo, path)`, used by all automated tests; `PATGitHubWriteClient` makes
+real REST calls against `api.github.com` using a personal access token, and is
+never exercised by the automated suite (see the propose-fix section below).
 
 **`EmbeddingProvider`** (`packages/embedding_provider`) — sibling to `AIProvider`,
 not a method on it: embedding and text-generation are independently swappable
@@ -96,10 +116,14 @@ thereafter), loaded once and reused via a process-wide `get_default_provider()`
 (`@lru_cache` singleton) so the model-load cost is paid once per process, not once
 per request or test.
 
-All three interfaces are swappable via `apps/api/src/codemind_api/providers.py` —
-replace the `Mock*`/`SentenceTransformer*` implementation there (and a config flag)
-to point at a real GitHub App or a different LLM/embedding provider later without
-touching route code.
+All interfaces are swappable via `apps/api/src/codemind_api/providers.py` — replace
+the `Mock*`/`SentenceTransformer*`/`Claude*`/`PAT*` implementation there (and a
+config flag) to point at a real GitHub App or a different LLM/embedding provider
+later without touching route code. `get_ai_provider_for_fix()` and
+`get_github_write_client()` (phase 4) follow the same pattern as the existing
+`get_ai_provider()`/`get_embedding_provider()`: both default to their Mock
+implementation and only switch to the real one when `ANTHROPIC_API_KEY` /
+`GITHUB_PAT` are configured (see `docs/setup.md`).
 
 ## Indexing pipeline (`apps/worker/src/codemind_worker/tasks/index_repository.py`)
 
@@ -237,6 +261,50 @@ one hop further); `from_symbol_id` is deliberately left unpopulated (would need
 in-body reference/usage resolution, a materially larger feature), so results are
 named `direct_dependent_files`/`transitive_dependent_files`, not `..._symbols`.
 
+## Propose fix / publish workflow (`apps/api/src/codemind_api/routers/proposed_changes.py`)
+
+Phase 4's manually-triggered "propose a fix, then publish it as a draft PR" flow.
+Two decisions were locked in explicitly for this round: **no GitHub App/webhooks** —
+this environment has no public URL to receive webhooks, so publishing is a personal
+access token (PAT) against a real target repo the user configures, triggered by a
+button click rather than an automatic PR review; and **real patch generation
+requires a real LLM** — a deterministic template can't write plausible code, unlike
+the phase 3 findings, so `propose_fix` is the one place this round where an actual
+Claude API call happens.
+
+**Scope split** — findings continue to come entirely from the mock-indexed demo
+repo; only the *publish* step touches a real external repo, and only when
+`GITHUB_TARGET_OWNER`/`GITHUB_TARGET_REPO` are configured. Automated tests never
+call the real GitHub or Claude APIs — they exercise `MockGitHubWriteClient`, and
+`ClaudeAIProvider` is covered only by construction/shape tests (verifying the exact
+`output_config: {"format": {"type": "json_schema", "schema": ...}}` call shape
+against the installed `anthropic` SDK, not an actual network call).
+
+1. `POST .../findings/{finding_id}/propose-fix` — loads the finding + its source
+   `File`, calls `AIProvider.propose_fix()` (Mock or Claude, via
+   `get_ai_provider_for_fix()`), persists the result as a `proposed_changes` row
+   with `status="draft"`. `generated_by` records which provider actually ran
+   (`isinstance(ai_provider, ClaudeAIProvider)`), not a config flag, so it can't
+   drift from reality.
+2. `GET .../proposed-changes/{id}` — fetch a proposed change by id.
+3. `POST .../proposed-changes/{id}/publish` — 400 if no publish target is
+   configured; 409 if already published. Otherwise:
+   - **Staleness check**: fetches the target file's *current* remote content via
+     `GitHubWriteClient.get_file()` and compares it against the `File.content`
+     snapshot the fix was generated from (joined through `proposed_changes.file_id`).
+     A mismatch returns 409 rather than silently overwriting a file that changed
+     upstream since the fix was proposed — no branch or PR is created in that case.
+   - On match: creates a branch (`codemind/fix-{proposed_change_id}`), updates the
+     file (using the fetched `sha`), optionally creates a proposed test file
+     (`sha=None`, since it's new), and opens a **draft** pull request. Persists
+     `status="published"`, `pr_url`, `pr_number`, `published_at`, `published_by`.
+
+The frontend (`ProposedFixPanel.tsx`, on the finding detail page) reuses
+`SourceViewer` for a side-by-side original/proposed diff — no new diff library —
+and gates publish behind an inline two-step confirmation (not a `window.confirm`,
+to match the rest of the app's styling) since it's a hard-to-reverse action against
+a real external repo.
+
 ## Live job progress
 
 `GET /api/organizations/{org_id}/jobs/{job_id}/events` is a Server-Sent Events stream
@@ -249,8 +317,19 @@ connections, so SSE tests use a real (non-rollback) session end-to-end.
 
 Documented explicitly so it's clear this is scope, not an oversight:
 
-- Real GitHub OAuth/App install flow, webhooks, PR creation/review — needs real
-  GitHub credentials + webhook infrastructure (spec phase 4).
+- Real GitHub OAuth/App install flow — needs real GitHub App credentials; phase 4
+  used a personal access token against a manually-configured target repo instead.
+- Webhook-triggered auto-review — this environment has no public URL to receive
+  GitHub webhooks; phase 4's publish flow is manually triggered instead.
+- Full PR review (posting review comments against an existing PR's diff, check-run
+  reporting) — phase 4's scope is propose-fix + publish, not reviewing PRs that
+  already exist; a further increment, not built this round.
+- Syncing an updated fix back to an already-published PR (re-publish/amend flow) —
+  phase 4 is first-publish-only; amending is a distinct feature.
+- Automated test coverage of `ClaudeAIProvider`/`PATGitHubWriteClient` against the
+  real Claude/GitHub APIs — deliberately excluded from CI (no network calls in
+  tests); covered only by one manual verification step with real credentials,
+  consistent with the rule against fabricating results.
 - Relationship types beyond raw `imports` (`calls`, `extends`, `implements`) in the
   architecture graph — phase 3.
 - Multi-level graph clustering / compound-node collapse-expand (repo/module/file
@@ -258,8 +337,6 @@ Documented explicitly so it's clear this is scope, not an oversight:
   `subsystems` metadata is forward-compatible with adding this later.
 - One node per external package instead of one shared `"external"` node — revisit
   once a real multi-hundred-file repo makes node-count an actual problem.
-- Test generation, PR review, proposed-patch generation (`POST /findings/{id}/propose-fix`)
-  — spec phases 4-5; nothing here should fake a diff.
 - Symbol-granularity (`from_symbol_id`) call-graph dependency impact — needs in-body
   reference/usage resolution, a materially larger parser feature; the impact endpoint
   is honestly scoped to file-level blast radius rooted at one exported symbol.

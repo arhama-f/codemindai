@@ -7,8 +7,12 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from codemind_ai_orchestrator import MockAIProvider
+from codemind_github_client import MockGitHubWriteClient
+
 from codemind_api.db import SessionLocal, engine, get_db
 from codemind_api.main import create_app
+from codemind_api.providers import get_ai_provider_for_fix, get_github_write_client
 from codemind_api.routers.indexing import get_redis_pool
 
 
@@ -53,6 +57,12 @@ async def client(db_session: AsyncSession):
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_redis_pool] = lambda: _FakeRedisPool()
+    # Force mocks regardless of real credentials in the environment/.env —
+    # automated tests must never call the real Claude or GitHub APIs. Tests
+    # that specifically need a seeded MockGitHubWriteClient (e.g. publish
+    # staleness checks) override get_github_write_client again themselves.
+    app.dependency_overrides[get_ai_provider_for_fix] = lambda: MockAIProvider()
+    app.dependency_overrides[get_github_write_client] = lambda: MockGitHubWriteClient()
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

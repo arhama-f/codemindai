@@ -17,5 +17,18 @@ class Settings(BaseSettings):
     web_origin: str = "http://localhost:3000"
     demo_repo_root: str = str(REPO_ROOT / "fixtures" / "demo-repo")
 
+    # Round 4 — propose-fix / publish workflow. Unset by default: both stay on
+    # their Mock implementations until real credentials are configured. See
+    # docs/architecture.md for the mock-indexed/real-publish-target split.
+    anthropic_api_key: str | None = None
+    github_pat: str | None = None
+    github_target_owner: str | None = None
+    github_target_repo: str | None = None
+    github_target_base_branch: str = "main"
+    # Prepended to a File's indexed path (e.g. "src/utils/math.ts") when
+    # calling the real GitHub API, for target repos where the indexed source
+    # tree lives under a subdirectory rather than at the repo root.
+    github_target_path_prefix: str = ""
+
 
 settings = Settings()

@@ -1360,6 +1360,195 @@
           }
         }
       }
+    },
+    "/api/organizations/{org_id}/repositories/{repo_id}/findings/{finding_id}/propose-fix": {
+      "post": {
+        "tags": [
+          "proposed-changes"
+        ],
+        "summary": "Propose Fix",
+        "operationId": "propose_fix_api_organizations__org_id__repositories__repo_id__findings__finding_id__propose_fix_post",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "repo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Repo Id"
+            }
+          },
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposedChangeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{org_id}/repositories/{repo_id}/proposed-changes/{proposed_change_id}": {
+      "get": {
+        "tags": [
+          "proposed-changes"
+        ],
+        "summary": "Get Proposed Change",
+        "operationId": "get_proposed_change_api_organizations__org_id__repositories__repo_id__proposed_changes__proposed_change_id__get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "repo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Repo Id"
+            }
+          },
+          {
+            "name": "proposed_change_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Proposed Change Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposedChangeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{org_id}/repositories/{repo_id}/proposed-changes/{proposed_change_id}/publish": {
+      "post": {
+        "tags": [
+          "proposed-changes"
+        ],
+        "summary": "Publish Proposed Change",
+        "operationId": "publish_proposed_change_api_organizations__org_id__repositories__repo_id__proposed_changes__proposed_change_id__publish_post",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "repo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Repo Id"
+            }
+          },
+          {
+            "name": "proposed_change_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Proposed Change Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2045,6 +2234,131 @@
           "role"
         ],
         "title": "OrganizationWithRoleResponse"
+      },
+      "ProposedChangeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "finding_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Finding Id"
+          },
+          "file_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "File Id"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "updated_content": {
+            "type": "string",
+            "title": "Updated Content"
+          },
+          "test_file_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test File Path"
+          },
+          "test_file_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test File Content"
+          },
+          "generated_by": {
+            "type": "string",
+            "title": "Generated By"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "pr_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Url"
+          },
+          "pr_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Number"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "finding_id",
+          "file_id",
+          "explanation",
+          "updated_content",
+          "test_file_path",
+          "test_file_content",
+          "generated_by",
+          "status",
+          "pr_url",
+          "pr_number",
+          "published_at"
+        ],
+        "title": "ProposedChangeResponse"
+      },
+      "PublishResponse": {
+        "properties": {
+          "pr_url": {
+            "type": "string",
+            "title": "Pr Url"
+          },
+          "pr_number": {
+            "type": "integer",
+            "title": "Pr Number"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pr_url",
+          "pr_number"
+        ],
+        "title": "PublishResponse"
       },
       "RegisterRequest": {
         "properties": {

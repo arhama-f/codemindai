@@ -114,3 +114,47 @@ class FindingDraftDTO(BaseModel):
     start_line: int
     end_line: int
     evidence: list[FindingEvidenceDTO]
+
+
+# --- GitHub write client DTOs ---
+
+
+class RemoteFileDTO(BaseModel):
+    path: str
+    sha: str
+    content: str
+
+
+class PullRequestDTO(BaseModel):
+    number: int
+    url: str
+    branch_name: str
+
+
+# --- Propose-fix DTOs ---
+
+
+class FindingDetailDTO(BaseModel):
+    """Everything an AIProvider needs to propose a fix for a finding, without
+    depending on the API layer's response models or the ORM."""
+
+    check_id: str
+    category: str
+    title: str
+    severity: str
+    confidence: str
+    explanation: str
+    recommended_fix: str
+    suggested_test: str | None = None
+    execution_path: str | None = None
+    file_path: str
+    start_line: int
+    end_line: int
+    evidence: list[FindingEvidenceDTO]
+
+
+class ProposedFixDTO(BaseModel):
+    explanation: str
+    updated_file_content: str
+    test_file_path: str | None = None
+    test_file_content: str | None = None

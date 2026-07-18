@@ -337,3 +337,35 @@ class Finding(UUIDPKMixin, CreatedAtMixin, Base):
     dismissed_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
+
+
+class ProposedChange(UUIDPKMixin, CreatedAtMixin, Base):
+    __tablename__ = "proposed_changes"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
+    )
+    finding_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("findings.id"), nullable=False
+    )
+    file_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("files.id"), nullable=False
+    )
+
+    explanation: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_content: Mapped[str] = mapped_column(Text, nullable=False)
+    test_file_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    test_file_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    generated_by: Mapped[str] = mapped_column(
+        String, CheckConstraint("generated_by in ('mock','claude')"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String, CheckConstraint("status in ('draft','published')"), server_default="draft"
+    )
+    pr_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pr_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    published_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )

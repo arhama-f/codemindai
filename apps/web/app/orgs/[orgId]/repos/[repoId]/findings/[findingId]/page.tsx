@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { apiClient } from "@/lib/apiClient";
 import { DismissFindingForm } from "@/components/DismissFindingForm";
+import { ProposedFixPanel } from "@/components/ProposedFixPanel";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { SourceViewer } from "@/components/SourceViewer";
 
@@ -107,6 +108,17 @@ export default function FindingDetailPage() {
             highlightEnd={finding.end_line}
           />
         </div>
+      )}
+
+      {fileQuery.data && (
+        <ProposedFixPanel
+          orgId={orgId}
+          repoId={repoId}
+          findingId={findingId}
+          filePath={finding.file_path}
+          language={fileQuery.data.language}
+          originalContent={fileQuery.data.content}
+        />
       )}
 
       {finding.status === "open" && (
