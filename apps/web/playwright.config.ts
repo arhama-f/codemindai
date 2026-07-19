@@ -1,8 +1,15 @@
+import fs from "node:fs";
 import path from "node:path";
 
 import { defineConfig } from "@playwright/test";
 
-const VENV_BIN = path.resolve(__dirname, "../../.venv/bin");
+// Locally, dependencies live in the repo's .venv. In CI (actions/setup-python,
+// no venv created), they're installed into the runner's system Python and
+// resolve via PATH instead — fall back to bare command names in that case.
+const LOCAL_VENV_BIN = path.resolve(__dirname, "../../.venv/bin");
+const VENV_BIN = fs.existsSync(LOCAL_VENV_BIN) ? LOCAL_VENV_BIN : null;
+const uvicornCmd = VENV_BIN ? `${VENV_BIN}/uvicorn` : "uvicorn";
+const arqCmd = VENV_BIN ? `${VENV_BIN}/arq` : "arq";
 const E2E_DATABASE_URL = "postgresql+asyncpg://codemind:codemind@localhost:5433/codemind_e2e";
 const REDIS_URL = "redis://localhost:6380/0";
 const API_URL = "http://localhost:8010";
@@ -20,7 +27,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `${VENV_BIN}/uvicorn codemind_api.main:app --port 8010`,
+      command: `${uvicornCmd} codemind_api.main:app --port 8010`,
       cwd: "../api",
       url: `${API_URL}/healthz`,
       reuseExistingServer: !process.env.CI,
@@ -46,7 +53,7 @@ export default defineConfig({
       },
     },
     {
-      command: `${VENV_BIN}/arq codemind_worker.settings.WorkerSettings`,
+      command: `${arqCmd} codemind_worker.settings.WorkerSettings`,
       cwd: "../worker",
       // arq has no HTTP endpoint to poll — wait for its actual startup log
       // line instead (confirmed via arq's source: worker.py logs this via a
