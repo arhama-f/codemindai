@@ -369,3 +369,24 @@ class ProposedChange(UUIDPKMixin, CreatedAtMixin, Base):
     published_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
+
+
+class PRReview(UUIDPKMixin, CreatedAtMixin, Base):
+    __tablename__ = "pr_reviews"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
+    )
+    owner: Mapped[str] = mapped_column(String, nullable=False)
+    repo: Mapped[str] = mapped_column(String, nullable=False)
+    pr_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    commit_sha: Mapped[str] = mapped_column(String, nullable=False)
+    findings_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    comments_posted: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String, CheckConstraint("status in ('success','failure')"), nullable=False
+    )
+    review_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )

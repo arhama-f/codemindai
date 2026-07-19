@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 
 import { apiClient } from "@/lib/apiClient";
+import { PRReviewPanel } from "@/components/PRReviewPanel";
 
 export default function OrganizationDetailPage() {
   const { orgId } = useParams<{ orgId: string }>();
@@ -125,6 +126,10 @@ export default function OrganizationDetailPage() {
             {isConnecting ? "Connecting..." : "Connect GitHub (mock)"}
           </button>
         )}
+      </section>
+
+      <section className="mt-8">
+        <PRReviewPanel orgId={orgId} />
       </section>
     </main>
   );

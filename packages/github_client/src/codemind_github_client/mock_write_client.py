@@ -1,7 +1,14 @@
 import hashlib
 
 from codemind_github_client.write_interface import GitHubWriteClient
-from codemind_shared_types.schemas import PullRequestDTO, RemoteFileDTO
+from codemind_shared_types.schemas import (
+    PullRequestDetailDTO,
+    PullRequestDTO,
+    PullRequestFileDTO,
+    RemoteFileDTO,
+    ReviewCommentDTO,
+    ReviewResultDTO,
+)
 
 
 def _compute_sha(content: str) -> str:
@@ -19,7 +26,32 @@ class MockGitHubWriteClient(GitHubWriteClient):
             self._files[key] = {"content": content, "sha": _compute_sha(content)}
         self.created_branches: list[dict[str, str]] = []
         self.created_pull_requests: list[PullRequestDTO] = []
+        self.created_reviews: list[dict] = []
+        self.created_commit_statuses: list[dict] = []
         self._pr_counter = 0
+        self._pull_requests: dict[tuple[str, str, int], PullRequestDetailDTO] = {}
+        self._pull_request_files: dict[tuple[str, str, int], list[PullRequestFileDTO]] = {}
+        self._review_counter = 0
+
+    def seed_pull_request(
+        self,
+        *,
+        owner: str,
+        repo: str,
+        pr_number: int,
+        title: str = "Test PR",
+        head_sha: str,
+        head_ref: str,
+        base_ref: str,
+        files: list[PullRequestFileDTO],
+    ) -> None:
+        """Register a fake open PR (and its changed files) for the PR-review
+        flow to fetch, mirroring `seed()`'s role for the propose-fix flow."""
+        key = (owner, repo, pr_number)
+        self._pull_requests[key] = PullRequestDetailDTO(
+            number=pr_number, title=title, head_sha=head_sha, head_ref=head_ref, base_ref=base_ref
+        )
+        self._pull_request_files[key] = files
 
     def seed(self, *, owner: str, repo: str, path: str, content: str) -> None:
         """Set or overwrite a file's content after construction — useful in
@@ -79,3 +111,67 @@ class MockGitHubWriteClient(GitHubWriteClient):
         )
         self.created_pull_requests.append(pull_request)
         return pull_request
+
+    async def get_pull_request(
+        self, *, owner: str, repo: str, pr_number: int
+    ) -> PullRequestDetailDTO:
+        pr = self._pull_requests.get((owner, repo, pr_number))
+        if pr is None:
+            raise FileNotFoundError(f"{owner}/{repo}#{pr_number} not seeded in mock write client")
+        return pr
+
+    async def get_pull_request_files(
+        self, *, owner: str, repo: str, pr_number: int
+    ) -> list[PullRequestFileDTO]:
+        files = self._pull_request_files.get((owner, repo, pr_number))
+        if files is None:
+            raise FileNotFoundError(f"{owner}/{repo}#{pr_number} not seeded in mock write client")
+        return files
+
+    async def create_review(
+        self,
+        *,
+        owner: str,
+        repo: str,
+        pr_number: int,
+        commit_sha: str,
+        body: str,
+        comments: list[ReviewCommentDTO],
+    ) -> ReviewResultDTO:
+        self._review_counter += 1
+        review_id = self._review_counter
+        self.created_reviews.append(
+            {
+                "owner": owner,
+                "repo": repo,
+                "pr_number": pr_number,
+                "commit_sha": commit_sha,
+                "body": body,
+                "comments": comments,
+            }
+        )
+        return ReviewResultDTO(
+            id=review_id,
+            html_url=f"https://github.com/{owner}/{repo}/pull/{pr_number}#pullrequestreview-{review_id}",
+        )
+
+    async def create_commit_status(
+        self,
+        *,
+        owner: str,
+        repo: str,
+        sha: str,
+        state: str,
+        description: str,
+        context: str,
+    ) -> None:
+        self.created_commit_statuses.append(
+            {
+                "owner": owner,
+                "repo": repo,
+                "sha": sha,
+                "state": state,
+                "description": description,
+                "context": context,
+            }
+        )

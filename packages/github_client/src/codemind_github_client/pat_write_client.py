@@ -3,7 +3,14 @@ import base64
 import httpx
 
 from codemind_github_client.write_interface import GitHubWriteClient
-from codemind_shared_types.schemas import PullRequestDTO, RemoteFileDTO
+from codemind_shared_types.schemas import (
+    PullRequestDetailDTO,
+    PullRequestDTO,
+    PullRequestFileDTO,
+    RemoteFileDTO,
+    ReviewCommentDTO,
+    ReviewResultDTO,
+)
 
 GITHUB_API_BASE = "https://api.github.com"
 
@@ -104,3 +111,85 @@ class PATGitHubWriteClient(GitHubWriteClient):
         return PullRequestDTO(
             number=data["number"], url=data["html_url"], branch_name=head_branch
         )
+
+    async def get_pull_request(
+        self, *, owner: str, repo: str, pr_number: int
+    ) -> PullRequestDetailDTO:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pr_number}",
+                headers=self._headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        return PullRequestDetailDTO(
+            number=data["number"],
+            title=data["title"],
+            head_sha=data["head"]["sha"],
+            head_ref=data["head"]["ref"],
+            base_ref=data["base"]["ref"],
+        )
+
+    async def get_pull_request_files(
+        self, *, owner: str, repo: str, pr_number: int
+    ) -> list[PullRequestFileDTO]:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pr_number}/files",
+                headers=self._headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        return [
+            PullRequestFileDTO(path=f["filename"], status=f["status"], patch=f.get("patch"))
+            for f in data
+        ]
+
+    async def create_review(
+        self,
+        *,
+        owner: str,
+        repo: str,
+        pr_number: int,
+        commit_sha: str,
+        body: str,
+        comments: list[ReviewCommentDTO],
+    ) -> ReviewResultDTO:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pr_number}/reviews",
+                headers=self._headers,
+                json={
+                    "commit_id": commit_sha,
+                    "body": body,
+                    "event": "COMMENT",
+                    "comments": [
+                        {"path": c.path, "line": c.line, "side": "RIGHT", "body": c.body}
+                        for c in comments
+                    ],
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        return ReviewResultDTO(id=data["id"], html_url=data["html_url"])
+
+    async def create_commit_status(
+        self,
+        *,
+        owner: str,
+        repo: str,
+        sha: str,
+        state: str,
+        description: str,
+        context: str,
+    ) -> None:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{GITHUB_API_BASE}/repos/{owner}/{repo}/statuses/{sha}",
+                headers=self._headers,
+                json={"state": state, "description": description, "context": context},
+            )
+            response.raise_for_status()

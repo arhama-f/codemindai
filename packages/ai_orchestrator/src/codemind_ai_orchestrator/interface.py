@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from codemind_shared_types.schemas import (
     FileSummaryDTO,
     FindingDetailDTO,
+    FindingDraftDTO,
     ParsedSymbol,
     ProposedFixDTO,
     RetrievedChunkDTO,
@@ -33,3 +34,8 @@ class AIProvider(ABC):
     async def propose_fix(
         self, *, finding: FindingDetailDTO, file_content: str
     ) -> ProposedFixDTO: ...
+
+    @abstractmethod
+    async def summarize_pr_review(
+        self, *, pr_title: str, findings: list[FindingDraftDTO]
+    ) -> str: ...

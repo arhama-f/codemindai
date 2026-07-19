@@ -1,6 +1,13 @@
 from abc import ABC, abstractmethod
 
-from codemind_shared_types.schemas import PullRequestDTO, RemoteFileDTO
+from codemind_shared_types.schemas import (
+    PullRequestDetailDTO,
+    PullRequestDTO,
+    PullRequestFileDTO,
+    RemoteFileDTO,
+    ReviewCommentDTO,
+    ReviewResultDTO,
+)
 
 
 class GitHubWriteClient(ABC):
@@ -46,3 +53,37 @@ class GitHubWriteClient(ABC):
         body: str,
         draft: bool = True,
     ) -> PullRequestDTO: ...
+
+    @abstractmethod
+    async def get_pull_request(
+        self, *, owner: str, repo: str, pr_number: int
+    ) -> PullRequestDetailDTO: ...
+
+    @abstractmethod
+    async def get_pull_request_files(
+        self, *, owner: str, repo: str, pr_number: int
+    ) -> list[PullRequestFileDTO]: ...
+
+    @abstractmethod
+    async def create_review(
+        self,
+        *,
+        owner: str,
+        repo: str,
+        pr_number: int,
+        commit_sha: str,
+        body: str,
+        comments: list[ReviewCommentDTO],
+    ) -> ReviewResultDTO: ...
+
+    @abstractmethod
+    async def create_commit_status(
+        self,
+        *,
+        owner: str,
+        repo: str,
+        sha: str,
+        state: str,
+        description: str,
+        context: str,
+    ) -> None: ...

@@ -2,6 +2,7 @@ from codemind_ai_orchestrator.interface import AIProvider
 from codemind_shared_types.schemas import (
     FileSummaryDTO,
     FindingDetailDTO,
+    FindingDraftDTO,
     ParsedSymbol,
     ProposedFixDTO,
     RetrievedChunkDTO,
@@ -88,4 +89,21 @@ class MockAIProvider(AIProvider):
             updated_file_content=marker + file_content,
             test_file_path=None,
             test_file_content=None,
+        )
+
+    async def summarize_pr_review(
+        self, *, pr_title: str, findings: list[FindingDraftDTO]
+    ) -> str:
+        if not findings:
+            return f'No issues found in the diff for "{pr_title}".'
+
+        severity_counts: dict[str, int] = {}
+        for finding in findings:
+            severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
+        counts_part = ", ".join(
+            f"{count} {severity}" for severity, count in sorted(severity_counts.items())
+        )
+        return (
+            f'CodeMind found {len(findings)} issue(s) in the diff for "{pr_title}": '
+            f"{counts_part}. See inline comments for details."
         )

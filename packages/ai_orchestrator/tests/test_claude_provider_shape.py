@@ -6,9 +6,10 @@ import pytest
 from codemind_ai_orchestrator.claude_provider import (
     FIX_SCHEMA,
     ClaudeAIProvider,
+    _build_pr_review_prompt,
     _build_prompt,
 )
-from codemind_shared_types.schemas import FindingDetailDTO, FindingEvidenceDTO
+from codemind_shared_types.schemas import FindingDetailDTO, FindingDraftDTO, FindingEvidenceDTO
 
 FINDING = FindingDetailDTO(
     check_id="unsafe-division",
@@ -62,3 +63,26 @@ async def test_other_methods_raise_not_implemented():
         await provider.identify_subsystems(file_paths=[])
     with pytest.raises(NotImplementedError):
         await provider.answer_repository_question(question="?", citations=[])
+
+
+def test_build_pr_review_prompt_includes_title_and_findings():
+    findings = [
+        FindingDraftDTO(
+            check_id="unsafe-division",
+            category="bug",
+            title="Unguarded division",
+            severity="high",
+            confidence="medium",
+            explanation="divides without a zero check",
+            recommended_fix="add a guard",
+            file_path="src/utils/math.ts",
+            start_line=2,
+            end_line=2,
+            evidence=[],
+        )
+    ]
+    prompt = _build_pr_review_prompt("Fix divide bug", findings)
+    assert "Fix divide bug" in prompt
+    assert "Unguarded division" in prompt
+    assert "src/utils/math.ts:2" in prompt
+    assert "divides without a zero check" in prompt

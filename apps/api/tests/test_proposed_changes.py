@@ -128,8 +128,16 @@ async def test_get_proposed_change_returns_it_by_id(
 
 
 async def test_publish_without_target_configured_returns_400(
-    client: AsyncClient, index_repository_directly, analyze_repository_directly
+    client: AsyncClient, index_repository_directly, analyze_repository_directly, monkeypatch
 ):
+    from codemind_api.config import settings
+
+    # Explicitly force "not configured" — don't rely on the ambient absence of
+    # GITHUB_TARGET_OWNER/REPO, since a real .env (e.g. from a prior manual
+    # verification step) may have set them for this process.
+    monkeypatch.setattr(settings, "github_target_owner", None)
+    monkeypatch.setattr(settings, "github_target_repo", None)
+
     org_id, repo_id = await _indexed_and_analyzed_repository(
         client, index_repository_directly, analyze_repository_directly, "publish-no-target@example.com"
     )
@@ -153,6 +161,7 @@ async def test_publish_succeeds_with_matching_remote_content(
     monkeypatch.setattr(settings, "github_target_owner", "acme")
     monkeypatch.setattr(settings, "github_target_repo", "widgets")
     monkeypatch.setattr(settings, "github_target_base_branch", "main")
+    monkeypatch.setattr(settings, "github_target_path_prefix", "")
 
     client, mock_write_client = client_with_write_client
     org_id, repo_id = await _indexed_and_analyzed_repository(
@@ -199,6 +208,7 @@ async def test_publish_twice_returns_409(
     monkeypatch.setattr(settings, "github_target_owner", "acme")
     monkeypatch.setattr(settings, "github_target_repo", "widgets")
     monkeypatch.setattr(settings, "github_target_base_branch", "main")
+    monkeypatch.setattr(settings, "github_target_path_prefix", "")
 
     client, mock_write_client = client_with_write_client
     org_id, repo_id = await _indexed_and_analyzed_repository(
@@ -236,6 +246,7 @@ async def test_publish_with_stale_remote_content_returns_409(
     monkeypatch.setattr(settings, "github_target_owner", "acme")
     monkeypatch.setattr(settings, "github_target_repo", "widgets")
     monkeypatch.setattr(settings, "github_target_base_branch", "main")
+    monkeypatch.setattr(settings, "github_target_path_prefix", "")
 
     client, mock_write_client = client_with_write_client
     org_id, repo_id = await _indexed_and_analyzed_repository(

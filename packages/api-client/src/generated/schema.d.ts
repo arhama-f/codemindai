@@ -490,6 +490,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/organizations/{org_id}/pr-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review Pull Request */
+        post: operations["review_pull_request_api_organizations__org_id__pr_reviews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/organizations/{org_id}/pr-reviews/{pr_review_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pr Review */
+        get: operations["get_pr_review_api_organizations__org_id__pr_reviews__pr_review_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -756,6 +790,37 @@ export interface components {
             /** Role */
             role: string;
         };
+        /** PRReviewResponse */
+        PRReviewResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Owner */
+            owner: string;
+            /** Repo */
+            repo: string;
+            /** Pr Number */
+            pr_number: number;
+            /** Pr Url */
+            pr_url: string;
+            /** Commit Sha */
+            commit_sha: string;
+            /** Findings Count */
+            findings_count: number;
+            /** Comments Posted */
+            comments_posted: number;
+            /** Status */
+            status: string;
+            /** Review Url */
+            review_url: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** ProposedChangeResponse */
         ProposedChangeResponse: {
             /**
@@ -866,6 +931,11 @@ export interface components {
              * Format: uuid
              */
             job_id: string;
+        };
+        /** StartPRReviewRequest */
+        StartPRReviewRequest: {
+            /** Pr Number */
+            pr_number: number;
         };
         /** SummaryResponse */
         SummaryResponse: {
@@ -1885,6 +1955,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublishResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_pull_request_api_organizations__org_id__pr_reviews_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartPRReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PRReviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pr_review_api_organizations__org_id__pr_reviews__pr_review_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                pr_review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PRReviewResponse"];
                 };
             };
             /** @description Validation Error */

@@ -1,11 +1,13 @@
 # CodeMind AI — Architecture
 
-This document covers the vertical slice (spec section 27) plus three increments: phase 2
+This document covers the vertical slice (spec section 27) plus four increments: phase 2
 (architecture graph, real embedding-based Q&A, richer source explorer), phase 3
 (deterministic bug/security/performance detection, a findings interface, dependency
-impact analysis), and phase 4 (propose-fix generation and publishing a fix as a draft
-GitHub pull request). It intentionally does **not** cover the full 25-section product
-spec — see [Deferred](#deferred-to-later-phases) below for what's out of scope and why.
+impact analysis), phase 4 (propose-fix generation and publishing a fix as a draft
+GitHub pull request), and phase 5 (reviewing an existing GitHub PR's diff: inline
+comments + a commit status). It intentionally does **not** cover the full 25-section
+product spec — see [Deferred](#deferred-to-later-phases) below for what's out of scope
+and why.
 
 ## Stack
 
@@ -49,7 +51,7 @@ inline in route handlers, per the spec's separation-of-concerns rule.
 
 ## Database
 
-18 tables across five migrations: the initial schema (`users`, `organizations`,
+19 tables across six migrations: the initial schema (`users`, `organizations`,
 `organization_members`, `github_installations`, `repositories`, `branches`,
 `commits`, `repository_indexes`, `files`, `symbols`, `symbol_relationships`,
 `code_chunks`, `embeddings`, `repository_summaries`, `job_runs`); a follow-up
@@ -60,13 +62,15 @@ real embedding model actually chosen; a third migration adding `analysis_runs` a
 table — every check produces 1-2 fixed evidence locations known at detection time,
 so a join table would buy nothing yet); a fourth adding
 `symbol_relationships.confidence` (`confirmed_static` | `unknown`, or `NULL` for
-external/unresolved imports) for dependency impact analysis; and a fifth
+external/unresolved imports) for dependency impact analysis; a fifth
 (`d5b2e9f1a4c7_proposed_changes.py`) adding `proposed_changes` for phase 4's
 propose-fix workflow — it deliberately has no `original_content`/`file_path`
 columns, joining through `file_id` → `files` for both instead, since `File.content`/
 `File.path` are already immutable once indexed (same "don't duplicate source of
-truth" reasoning as `findings.evidence`). Every table a route queries directly
-carries
+truth" reasoning as `findings.evidence`); and a sixth
+(`e6c3a8d2f9b1_pr_reviews.py`) adding `pr_reviews` for phase 5's PR-review
+workflow — deliberately with **no `repository_id` FK** (see the PR-review section
+below for why). Every table a route queries directly carries
 `organization_id` so tenant isolation is a flat `WHERE organization_id = :org_id`
 rather than a multi-hop join. `status`/`kind`/`relationship_type` columns are
 `VARCHAR` + `CHECK` (not native `ENUM`) so later phases can add new values without an
@@ -91,20 +95,24 @@ is wired into the propose-fix endpoint (see below). `answer_repository_question`
 (the LLM half of `/ask`) is still `MockAIProvider`'s deterministic template — only
 *retrieval* became real in phase 2, not answer composition; that's an explicit
 scope boundary, not an oversight. `ClaudeAIProvider` (phase 4) implements only
-`propose_fix` for real — a real LLM call needs an actual model, so it's the one
-`AIProvider` method phase 4 chose to make real; its other four methods raise
-`NotImplementedError` rather than fake a model call, and indexing/summarization
-stays on `MockAIProvider` this round (see the propose-fix section below).
+`propose_fix` and `summarize_pr_review` for real — real LLM calls need an actual
+model, so those are the two `AIProvider` methods that write AI-generated text to a
+real GitHub PR; its other four methods raise `NotImplementedError` rather than
+fake a model call, and indexing/summarization stays on `MockAIProvider` (see the
+propose-fix and PR-review sections below).
 
 **`GitHubWriteClient`** (`packages/github_client`) — a separate interface from the
-read-only `GitHubClient` above, since indexing (read) and propose-fix/publish
-(write) are independently swappable and the read path shouldn't need write
-credentials. `get_file`, `create_branch`, `update_file` (sha-based optimistic
-concurrency; `sha=None` creates a new file, matching GitHub's real contents API),
-`create_pull_request`. `MockGitHubWriteClient` is an in-memory dict keyed by
-`(owner, repo, path)`, used by all automated tests; `PATGitHubWriteClient` makes
-real REST calls against `api.github.com` using a personal access token, and is
-never exercised by the automated suite (see the propose-fix section below).
+read-only `GitHubClient` above, since indexing (read) and propose-fix/publish/
+PR-review (write) are independently swappable and the read path shouldn't need
+write credentials. Propose-fix/publish: `get_file`, `create_branch`, `update_file`
+(sha-based optimistic concurrency; `sha=None` creates a new file, matching GitHub's
+real contents API), `create_pull_request`. PR-review (phase 5): `get_pull_request`,
+`get_pull_request_files`, `create_review`, `create_commit_status`.
+`MockGitHubWriteClient` is an in-memory store keyed by `(owner, repo, path)`
+(files) or `(owner, repo, pr_number)` (PRs), used by all automated tests;
+`PATGitHubWriteClient` makes real REST calls against `api.github.com` using a
+personal access token, and is never exercised by the automated suite (see the
+propose-fix and PR-review sections below).
 
 **`EmbeddingProvider`** (`packages/embedding_provider`) — sibling to `AIProvider`,
 not a method on it: embedding and text-generation are independently swappable
@@ -305,6 +313,59 @@ and gates publish behind an inline two-step confirmation (not a `window.confirm`
 to match the rest of the app's styling) since it's a hard-to-reverse action against
 a real external repo.
 
+## Full PR review (`apps/api/src/codemind_api/routers/pr_review.py`)
+
+Phase 5: reviewing an *existing* GitHub PR's diff — posting inline review comments
+and setting a pass/fail commit status, both real GitHub writes, manually triggered
+(same "no GitHub App/webhooks" boundary phase 4 locked in — this environment has no
+public URL to receive webhooks).
+
+**Checks API vs. Commit Status API — a deliberate substitution, not a partial
+implementation.** GitHub's Checks API (rich check-runs with inline annotations) is
+GitHub-App-only — it rejects personal access tokens and OAuth tokens outright, and
+always has (this is not a recent restriction). Since phase 4 already locked in
+PAT-only, this round uses the **Commit Status API**
+(`POST /repos/{owner}/{repo}/statuses/{sha}`) instead: a simple pass/fail signal
+shown on the PR, without rich inline annotations. Line-level annotations still
+happen — just via the (PAT-compatible) Pull Request Reviews API's line comments,
+not Checks.
+
+**PR review is org-scoped, not repository-scoped** (`POST
+/api/organizations/{org_id}/pr-reviews`, not nested under
+`/repositories/{repo_id}/`). The publish target (`GITHUB_TARGET_OWNER/REPO`) is
+already a global org-level setting from phase 4, and reviewing PR #N on that real
+repo has no meaningful relationship to any CodeMind-tracked (mock-indexed)
+`Repository` row — nesting it under one would be misleading. This is also why
+`pr_reviews` has no `repository_id` FK.
+
+**Findings are computed fresh, live, from the PR's actual diff** — not from the
+mock-indexed demo repo. For each `.ts`/`.tsx` changed file (skipping removed files
+and anything without a `patch`): `github_client.diff_utils.parse_patch_added_lines()`
+parses the unified-diff hunk headers to find which new-file line numbers are
+additions (`+`) — the *only* lines GitHub's Reviews API accepts a line comment on.
+The file's real content is fetched at the PR's head ref, run through
+`code_parser.parse_file()` + `analysis_engine.analyze_file()` (the same phase 3
+checks, called directly and synchronously — no DB, no mock repo involved), and
+`analysis_engine.diff_filter.filter_findings_to_added_lines()` keeps only findings
+whose `start_line` is an added line — issues actually introduced by this diff, not
+pre-existing ones outside it (also a hard API requirement, not just good practice).
+
+Comment bodies reuse existing deterministic finding text (title/severity/
+explanation/recommended_fix). One review is posted per PR (not one comment
+individually) via `create_review()`, skipped entirely if zero relevant findings
+were found (no empty-review spam) — but `create_commit_status()` is always called,
+`"failure"` if any relevant finding is `critical`/`high`, else `"success"`. The
+review's overall summary paragraph is the one new AI-generated piece this round:
+`AIProvider.summarize_pr_review()`, real on `ClaudeAIProvider` (plain-text
+`messages.create()` call, no `output_config.format` needed for a prose paragraph)
+and deterministic-template on `MockAIProvider`, using the same
+`get_ai_provider_for_fix()` toggle phase 4 established (kept as-is despite the
+name — it's "the AI provider used for real GitHub-facing generation," now serving
+two methods).
+
+No history/list UI this round — `GET /pr-reviews/{id}` exists for future linking,
+but there's no list endpoint or page (see Deferred).
+
 ## Live job progress
 
 `GET /api/organizations/{org_id}/jobs/{job_id}/events` is a Server-Sent Events stream
@@ -317,18 +378,24 @@ connections, so SSE tests use a real (non-rollback) session end-to-end.
 
 Documented explicitly so it's clear this is scope, not an oversight:
 
-- Real GitHub OAuth/App install flow — needs real GitHub App credentials; phase 4
-  used a personal access token against a manually-configured target repo instead.
+- Real GitHub OAuth/App install flow — needs real GitHub App credentials; phases
+  4-5 use a personal access token against a manually-configured target repo instead.
 - Webhook-triggered auto-review — this environment has no public URL to receive
-  GitHub webhooks; phase 4's publish flow is manually triggered instead.
-- Full PR review (posting review comments against an existing PR's diff, check-run
-  reporting) — phase 4's scope is propose-fix + publish, not reviewing PRs that
-  already exist; a further increment, not built this round.
+  GitHub webhooks; publishing and PR review are both manually triggered instead.
+- Rich check-runs via the Checks API — GitHub-App-only, incompatible with the
+  PAT-only decision; the Commit Status API is the documented substitute (see the
+  Full PR review section above).
 - Syncing an updated fix back to an already-published PR (re-publish/amend flow) —
   phase 4 is first-publish-only; amending is a distinct feature.
+- PR review history/list UI — schema supports it (`GET /pr-reviews/{id}` +
+  `organization_id` scoping), but no list endpoint/page this round.
+- Approve/request-changes PR review events — reviews are always posted as
+  `COMMENT`; gating merges is the commit status's job, not the review state's.
+- Multi-page PR file fetching — `get_pull_request_files` uses the API's default
+  page size; a PR with more files than that isn't handled specially yet.
 - Automated test coverage of `ClaudeAIProvider`/`PATGitHubWriteClient` against the
   real Claude/GitHub APIs — deliberately excluded from CI (no network calls in
-  tests); covered only by one manual verification step with real credentials,
+  tests); covered only by manual verification steps with real credentials,
   consistent with the rule against fabricating results.
 - Relationship types beyond raw `imports` (`calls`, `extends`, `implements`) in the
   architecture graph — phase 3.

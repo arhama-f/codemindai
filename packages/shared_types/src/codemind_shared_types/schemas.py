@@ -131,6 +131,34 @@ class PullRequestDTO(BaseModel):
     branch_name: str
 
 
+# --- PR review DTOs ---
+
+
+class PullRequestFileDTO(BaseModel):
+    path: str
+    status: str
+    patch: str | None = None
+
+
+class PullRequestDetailDTO(BaseModel):
+    number: int
+    title: str
+    head_sha: str
+    head_ref: str
+    base_ref: str
+
+
+class ReviewCommentDTO(BaseModel):
+    path: str
+    line: int
+    body: str
+
+
+class ReviewResultDTO(BaseModel):
+    id: int
+    html_url: str
+
+
 # --- Propose-fix DTOs ---
 
 

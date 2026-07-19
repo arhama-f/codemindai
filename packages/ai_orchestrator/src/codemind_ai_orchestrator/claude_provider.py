@@ -6,6 +6,7 @@ from codemind_ai_orchestrator.interface import AIProvider
 from codemind_shared_types.schemas import (
     FileSummaryDTO,
     FindingDetailDTO,
+    FindingDraftDTO,
     ParsedSymbol,
     ProposedFixDTO,
     RetrievedChunkDTO,
@@ -27,9 +28,25 @@ FIX_SCHEMA = {
 }
 
 _NOT_IMPLEMENTED_MSG = (
-    "ClaudeAIProvider only implements propose_fix (round 4 scope). Indexing/summarization "
-    "still runs through MockAIProvider — see apps/api/src/codemind_api/providers.py."
+    "ClaudeAIProvider only implements propose_fix and summarize_pr_review (real "
+    "GitHub-facing generation). Indexing/summarization still runs through "
+    "MockAIProvider — see apps/api/src/codemind_api/providers.py."
 )
+
+
+def _build_pr_review_prompt(pr_title: str, findings: list[FindingDraftDTO]) -> str:
+    findings_text = "\n\n".join(
+        f"- {f.severity}/{f.category} at {f.file_path}:{f.start_line} — {f.title}\n"
+        f"  {f.explanation}"
+        for f in findings
+    )
+    return (
+        f'Write a short (2-4 sentence) summary for a GitHub pull request review comment.\n\n'
+        f'PR title: "{pr_title}"\n\n'
+        f"Findings in this PR's diff:\n{findings_text}\n\n"
+        "Write only the summary paragraph — no preamble, no markdown headers. It will be "
+        "posted as the top-level body of a PR review, above the inline comments."
+    )
 
 
 def _build_prompt(finding: FindingDetailDTO, file_content: str) -> str:
@@ -55,12 +72,13 @@ def _build_prompt(finding: FindingDetailDTO, file_content: str) -> str:
 
 class ClaudeAIProvider(AIProvider):
     """Real AI provider backed by the Claude API, used only for `propose_fix`
-    (round 4's scope — see docs/architecture.md). Never exercised by the
-    automated test suite; wired in only when ANTHROPIC_API_KEY is configured.
+    and `summarize_pr_review` — the two places CodeMind writes AI-generated
+    text to a real GitHub PR (see docs/architecture.md). Never exercised by
+    the automated test suite; wired in only when ANTHROPIC_API_KEY is set.
 
     The other AIProvider methods are intentionally not implemented here —
-    indexing/summarization stays on MockAIProvider this round, and faking
-    those calls on this provider would misrepresent what's actually AI-backed.
+    indexing/summarization stays on MockAIProvider, and faking those calls on
+    this provider would misrepresent what's actually AI-backed.
     """
 
     def __init__(self, *, api_key: str, model: str = DEFAULT_MODEL) -> None:
@@ -99,3 +117,18 @@ class ClaudeAIProvider(AIProvider):
             raise RuntimeError(f"Expected a text content block, got {content_block.type!r}")
         result = json.loads(content_block.text)
         return ProposedFixDTO(**result)
+
+    async def summarize_pr_review(
+        self, *, pr_title: str, findings: list[FindingDraftDTO]
+    ) -> str:
+        response = await self._client.messages.create(
+            model=self._model,
+            max_tokens=1024,
+            messages=[
+                {"role": "user", "content": _build_pr_review_prompt(pr_title, findings)}
+            ],
+        )
+        content_block = response.content[0]
+        if content_block.type != "text":
+            raise RuntimeError(f"Expected a text content block, got {content_block.type!r}")
+        return content_block.text

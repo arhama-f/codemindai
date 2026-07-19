@@ -1549,6 +1549,112 @@
           }
         }
       }
+    },
+    "/api/organizations/{org_id}/pr-reviews": {
+      "post": {
+        "tags": [
+          "pr-review"
+        ],
+        "summary": "Review Pull Request",
+        "operationId": "review_pull_request_api_organizations__org_id__pr_reviews_post",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPRReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PRReviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{org_id}/pr-reviews/{pr_review_id}": {
+      "get": {
+        "tags": [
+          "pr-review"
+        ],
+        "summary": "Get Pr Review",
+        "operationId": "get_pr_review_api_organizations__org_id__pr_reviews__pr_review_id__get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "pr_review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pr Review Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PRReviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2235,6 +2341,78 @@
         ],
         "title": "OrganizationWithRoleResponse"
       },
+      "PRReviewResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "repo": {
+            "type": "string",
+            "title": "Repo"
+          },
+          "pr_number": {
+            "type": "integer",
+            "title": "Pr Number"
+          },
+          "pr_url": {
+            "type": "string",
+            "title": "Pr Url"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "findings_count": {
+            "type": "integer",
+            "title": "Findings Count"
+          },
+          "comments_posted": {
+            "type": "integer",
+            "title": "Comments Posted"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "review_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Url"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "owner",
+          "repo",
+          "pr_number",
+          "pr_url",
+          "commit_sha",
+          "findings_count",
+          "comments_posted",
+          "status",
+          "review_url",
+          "created_at"
+        ],
+        "title": "PRReviewResponse"
+      },
       "ProposedChangeResponse": {
         "properties": {
           "id": {
@@ -2532,6 +2710,19 @@
           "job_id"
         ],
         "title": "StartIndexResponse"
+      },
+      "StartPRReviewRequest": {
+        "properties": {
+          "pr_number": {
+            "type": "integer",
+            "title": "Pr Number"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pr_number"
+        ],
+        "title": "StartPRReviewRequest"
       },
       "SummaryResponse": {
         "properties": {
