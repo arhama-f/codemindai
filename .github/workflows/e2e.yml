@@ -32,8 +32,8 @@ jobs:
           pip install -e packages/shared_types -e packages/github_client \
                       -e packages/code_parser -e packages/ai_orchestrator \
                       -e packages/embedding_provider -e packages/analysis_engine
-          pip install -r apps/api/requirements-dev.txt -e apps/api
-          pip install -r apps/worker/requirements-dev.txt -e apps/worker
+          (cd apps/api && pip install -r requirements-dev.txt -e .)
+          (cd apps/worker && pip install -r requirements-dev.txt -e .)
 
       - name: Migrate codemind_e2e
         working-directory: apps/api
