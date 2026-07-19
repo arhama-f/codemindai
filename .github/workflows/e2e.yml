@@ -15,11 +15,6 @@ jobs:
       - name: Start Postgres + Redis
         run: docker compose up -d --wait
 
-      - name: Create codemind_e2e database
-        run: |
-          docker exec $(docker compose ps -q postgres) psql -U codemind -d codemind -c "CREATE DATABASE codemind_e2e;"
-          docker exec $(docker compose ps -q postgres) psql -U codemind -d codemind_e2e -c "CREATE EXTENSION IF NOT EXISTS vector; CREATE EXTENSION IF NOT EXISTS pgcrypto; CREATE EXTENSION IF NOT EXISTS pg_trgm;"
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
