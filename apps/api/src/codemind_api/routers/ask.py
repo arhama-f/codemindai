@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from codemind_api.db import get_db
 from codemind_api.deps import get_org_membership
-from codemind_api.providers import get_ai_provider, get_embedding_provider
+from codemind_api.providers import get_embedding_provider, get_real_ai_provider
 from codemind_api.repository_index_utils import get_latest_completed_index
 from codemind_ai_orchestrator import AIProvider
 from codemind_embedding_provider import EmbeddingProvider
@@ -156,7 +156,7 @@ async def ask_repository_question(
     repo_id: UUID,
     payload: AskRequest,
     db: AsyncSession = Depends(get_db),
-    ai_provider: AIProvider = Depends(get_ai_provider),
+    ai_provider: AIProvider = Depends(get_real_ai_provider),
     embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
     _membership=Depends(get_org_membership),
 ) -> AskResponse:

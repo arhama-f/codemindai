@@ -1,4 +1,13 @@
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from codemind_ai_orchestrator import AIProvider
+from codemind_shared_types.schemas import RetrievedChunkDTO
+
+from codemind_api.db import get_db
+from codemind_api.main import create_app
+from codemind_api.providers import get_real_ai_provider
+from codemind_api.routers.indexing import get_redis_pool
 
 
 async def _indexed_repository(client: AsyncClient, index_repository_directly, email: str) -> tuple[str, str]:
@@ -81,3 +90,63 @@ async def test_ask_about_user_service_cites_class(client: AsyncClient, index_rep
     assert response.status_code == 200
     body = response.json()
     assert any(c["file_path"] == "src/services/userService.ts" for c in body["citations"])
+
+
+class _FakeArqJob:
+    job_id = "fake-arq-job-id"
+
+
+class _FakeRedisPool:
+    async def enqueue_job(self, *args, **kwargs) -> _FakeArqJob:
+        return _FakeArqJob()
+
+
+class _StubAIProvider(AIProvider):
+    """A distinctive stand-in that isn't MockAIProvider's real template, so a
+    test can prove /ask actually calls whatever get_real_ai_provider() returns
+    instead of being hardcoded to MockAIProvider."""
+
+    async def answer_repository_question(
+        self, *, question: str, citations: list[RetrievedChunkDTO]
+    ) -> str:
+        return f"STUB ANSWER for: {question}"
+
+    async def summarize_file(self, **kwargs):
+        raise NotImplementedError
+
+    async def summarize_directory(self, **kwargs):
+        raise NotImplementedError
+
+    async def identify_subsystems(self, **kwargs):
+        raise NotImplementedError
+
+    async def propose_fix(self, **kwargs):
+        raise NotImplementedError
+
+    async def summarize_pr_review(self, **kwargs):
+        raise NotImplementedError
+
+
+async def test_ask_uses_whatever_get_real_ai_provider_returns(
+    db_session: AsyncSession, index_repository_directly
+):
+    app = create_app()
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_redis_pool] = lambda: _FakeRedisPool()
+    app.dependency_overrides[get_real_ai_provider] = lambda: _StubAIProvider()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        org_id, repo_id = await _indexed_repository(
+            client, index_repository_directly, "ask-stub-provider@example.com"
+        )
+        response = await client.post(
+            f"/api/organizations/{org_id}/repositories/{repo_id}/ask",
+            json={"question": "where is divide?"},
+        )
+        assert response.status_code == 200
+        assert response.json()["answer"] == "STUB ANSWER for: where is divide?"

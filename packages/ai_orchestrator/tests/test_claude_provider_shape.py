@@ -6,10 +6,16 @@ import pytest
 from codemind_ai_orchestrator.claude_provider import (
     FIX_SCHEMA,
     ClaudeAIProvider,
+    _build_ask_prompt,
     _build_pr_review_prompt,
     _build_prompt,
 )
-from codemind_shared_types.schemas import FindingDetailDTO, FindingDraftDTO, FindingEvidenceDTO
+from codemind_shared_types.schemas import (
+    FindingDetailDTO,
+    FindingDraftDTO,
+    FindingEvidenceDTO,
+    RetrievedChunkDTO,
+)
 
 FINDING = FindingDetailDTO(
     check_id="unsafe-division",
@@ -53,7 +59,7 @@ def test_build_prompt_includes_finding_and_file_content():
     assert FINDING.recommended_fix in prompt
 
 
-async def test_other_methods_raise_not_implemented():
+async def test_indexing_time_methods_raise_not_implemented():
     provider = ClaudeAIProvider(api_key="sk-test-not-a-real-key")
     with pytest.raises(NotImplementedError):
         await provider.summarize_file(file_path="x.ts", content="", symbols=[])
@@ -61,8 +67,28 @@ async def test_other_methods_raise_not_implemented():
         await provider.summarize_directory(dir_path=".", file_summaries=[])
     with pytest.raises(NotImplementedError):
         await provider.identify_subsystems(file_paths=[])
-    with pytest.raises(NotImplementedError):
-        await provider.answer_repository_question(question="?", citations=[])
+
+
+def test_build_ask_prompt_includes_question_and_citations():
+    citations = [
+        RetrievedChunkDTO(
+            file_path="src/utils/math.ts",
+            start_line=14,
+            end_line=16,
+            snippet="export function divide(a: number, b: number): number {\n  return a / b;\n}",
+        )
+    ]
+    prompt = _build_ask_prompt("how do I divide two numbers?", citations)
+    assert "how do I divide two numbers?" in prompt
+    assert "src/utils/math.ts:14-16" in prompt
+    assert "export function divide" in prompt
+
+
+def test_build_ask_prompt_with_no_citations_asks_for_an_honest_no_match_response():
+    prompt = _build_ask_prompt("what does this repo do?", [])
+    assert "what does this repo do?" in prompt
+    assert "no relevant code was found" in prompt
+    assert "Do not speculate" in prompt
 
 
 def test_build_pr_review_prompt_includes_title_and_findings():

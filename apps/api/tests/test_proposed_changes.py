@@ -6,7 +6,7 @@ from codemind_ai_orchestrator import MockAIProvider
 
 from codemind_api.db import get_db
 from codemind_api.main import create_app
-from codemind_api.providers import get_ai_provider_for_fix, get_github_write_client
+from codemind_api.providers import get_real_ai_provider, get_github_write_client
 from codemind_api.routers.indexing import get_redis_pool
 from codemind_github_client import MockGitHubWriteClient
 
@@ -37,7 +37,7 @@ async def client_with_write_client(db_session: AsyncSession):
     app.dependency_overrides[get_github_write_client] = lambda: mock_write_client
     # Force the mock AI provider regardless of real credentials in the
     # environment/.env — automated tests must never call the real Claude API.
-    app.dependency_overrides[get_ai_provider_for_fix] = lambda: MockAIProvider()
+    app.dependency_overrides[get_real_ai_provider] = lambda: MockAIProvider()
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

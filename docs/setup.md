@@ -104,7 +104,9 @@ cd apps/web && npx tsc --noEmit
 6. Click **Ask a question** and try something with **no literal keyword overlap**
    with the code, e.g. *"how do I split a number into pieces?"* — it should still
    cite `src/utils/math.ts`'s `divide` function, proving retrieval is genuinely
-   semantic (via real embeddings), not just keyword matching.
+   semantic (via real embeddings), not just keyword matching. Without real
+   credentials configured (see below), the answer text is a deterministic
+   template; with `ANTHROPIC_API_KEY` set, it's a real Claude-composed answer.
 7. Click **Findings**, then **Run analysis** and watch the progress bar. When it
    completes, 9 real findings should appear (3 bugs, 3 security, 3 performance).
    Open one to see its evidence/explanation/recommended fix, and try dismissing it
@@ -121,12 +123,15 @@ cd apps/web && npx tsc --noEmit
     and click **Review PR**, then **Confirm review** — same as step 9, without real
     credentials this correctly shows *"No target repo configured"*.
 
-## Real credentials for propose-fix / publish / PR review (optional)
+## Real credentials for propose-fix / publish / PR review / `/ask` (optional)
 
-By default, propose-fix and PR-review summaries use `MockAIProvider`, and
-publish/PR-review writes use `MockGitHubWriteClient` — nothing leaves your machine.
-To exercise the real Claude API and a real GitHub repo, set these in
-`apps/api/.env` (create it if it doesn't exist) and restart the API server:
+By default, propose-fix, PR-review summaries, and `/ask` answers all use
+`MockAIProvider`, and publish/PR-review writes use `MockGitHubWriteClient` —
+nothing leaves your machine. `ANTHROPIC_API_KEY` alone is enough to make `/ask`
+answers real (no GitHub target needed, since `/ask` only reads from the
+already-indexed mock repo). To also exercise real GitHub writes (publish,
+PR review), set these in `apps/api/.env` (create it if it doesn't exist) and
+restart the API server:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...

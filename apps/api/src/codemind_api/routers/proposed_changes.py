@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from codemind_api.config import settings
 from codemind_api.db import get_db
 from codemind_api.deps import get_current_user, get_org_membership
-from codemind_api.providers import get_ai_provider_for_fix, get_github_write_client
+from codemind_api.providers import get_real_ai_provider, get_github_write_client
 
 router = APIRouter(prefix="/api/organizations/{org_id}/repositories/{repo_id}", tags=["proposed-changes"])
 
@@ -80,7 +80,7 @@ async def propose_fix(
     repo_id: UUID,
     finding_id: UUID,
     db: AsyncSession = Depends(get_db),
-    ai_provider: AIProvider = Depends(get_ai_provider_for_fix),
+    ai_provider: AIProvider = Depends(get_real_ai_provider),
     _membership=Depends(get_org_membership),
 ) -> ProposedChangeResponse:
     finding = await _get_org_scoped_finding(db, org_id, finding_id)

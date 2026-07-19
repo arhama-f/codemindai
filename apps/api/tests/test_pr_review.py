@@ -8,7 +8,7 @@ from codemind_shared_types.schemas import PullRequestFileDTO
 
 from codemind_api.db import get_db
 from codemind_api.main import create_app
-from codemind_api.providers import get_ai_provider_for_fix, get_github_write_client
+from codemind_api.providers import get_real_ai_provider, get_github_write_client
 from codemind_api.routers.indexing import get_redis_pool
 
 DIVIDE_SOURCE = (
@@ -38,7 +38,7 @@ async def client_with_write_client(db_session: AsyncSession):
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_redis_pool] = lambda: _FakeRedisPool()
     app.dependency_overrides[get_github_write_client] = lambda: mock_write_client
-    app.dependency_overrides[get_ai_provider_for_fix] = lambda: MockAIProvider()
+    app.dependency_overrides[get_real_ai_provider] = lambda: MockAIProvider()
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

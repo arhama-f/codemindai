@@ -1,13 +1,14 @@
 # CodeMind AI — Architecture
 
-This document covers the vertical slice (spec section 27) plus four increments: phase 2
-(architecture graph, real embedding-based Q&A, richer source explorer), phase 3
+This document covers the vertical slice (spec section 27) plus five increments: phase 2
+(architecture graph, real embedding-based retrieval, richer source explorer), phase 3
 (deterministic bug/security/performance detection, a findings interface, dependency
 impact analysis), phase 4 (propose-fix generation and publishing a fix as a draft
-GitHub pull request), and phase 5 (reviewing an existing GitHub PR's diff: inline
-comments + a commit status). It intentionally does **not** cover the full 25-section
-product spec — see [Deferred](#deferred-to-later-phases) below for what's out of scope
-and why.
+GitHub pull request), phase 5 (reviewing an existing GitHub PR's diff: inline
+comments + a commit status), and phase 6 (real answer composition for `/ask`, closing
+the last mock-templated piece of the ask flow — retrieval had already been real since
+phase 2). It intentionally does **not** cover the full 25-section product spec — see
+[Deferred](#deferred-to-later-phases) below for what's out of scope and why.
 
 ## Stack
 
@@ -88,18 +89,23 @@ synthetic commit SHA/timestamp (deterministic for tests).
 
 **`AIProvider`** (`packages/ai_orchestrator`) — `summarize_file`,
 `summarize_directory`, `identify_subsystems`, `answer_repository_question`,
-`propose_fix`. `MockAIProvider` is fully deterministic/template-based (counts and
-names only, never timestamps or randomness) so tests assert exact strings.
-`identify_subsystems` is wired into the architecture graph endpoint; `propose_fix`
-is wired into the propose-fix endpoint (see below). `answer_repository_question`
-(the LLM half of `/ask`) is still `MockAIProvider`'s deterministic template — only
-*retrieval* became real in phase 2, not answer composition; that's an explicit
-scope boundary, not an oversight. `ClaudeAIProvider` (phase 4) implements only
-`propose_fix` and `summarize_pr_review` for real — real LLM calls need an actual
-model, so those are the two `AIProvider` methods that write AI-generated text to a
-real GitHub PR; its other four methods raise `NotImplementedError` rather than
-fake a model call, and indexing/summarization stays on `MockAIProvider` (see the
-propose-fix and PR-review sections below).
+`propose_fix`, `summarize_pr_review`. `MockAIProvider` is fully
+deterministic/template-based (counts and names only, never timestamps or
+randomness) so tests assert exact strings. `identify_subsystems` is wired into
+the architecture graph endpoint and stays on `MockAIProvider` always — it's
+indexing-time summarization, not user-facing generation. `ClaudeAIProvider`
+implements three methods for real: `propose_fix` and `summarize_pr_review` write
+AI-generated text to a real GitHub PR (phases 4-5); `answer_repository_question`
+(phase 6) composes a real answer for `/ask` over already-real (embedding-based)
+retrieval from phase 2 — retrieval and composition became real in two separate
+rounds, not together, which was an explicit scope boundary at the time, not an
+oversight. Its other three methods raise `NotImplementedError` rather than fake a
+model call, and indexing-time summarization always stays on `MockAIProvider` (see
+the propose-fix, PR-review, and `/ask` sections below). All three real methods are
+reached through one provider getter, `get_real_ai_provider()`
+(`apps/api/src/codemind_api/providers.py`) — named generically because it now
+serves three different call sites, not "for fix" as an earlier, narrower version
+of this function was once named.
 
 **`GitHubWriteClient`** (`packages/github_client`) — a separate interface from the
 read-only `GitHubClient` above, since indexing (read) and propose-fix/publish/
@@ -159,10 +165,10 @@ directly (as in tests) or via the real arq worker, since all its dependencies
 Progress percentages are written to `job_runs` at each step so the SSE endpoint has
 something to report.
 
-## `/ask` retrieval (`apps/api/src/codemind_api/routers/ask.py`)
+## `/ask` retrieval and answer composition (`apps/api/src/codemind_api/routers/ask.py`)
 
-Real embedding-based semantic search as the top-priority tier, with the original
-lexical approach preserved beneath it as a fallback:
+Real embedding-based semantic search as the top-priority retrieval tier, with the
+original lexical approach preserved beneath it as a fallback:
 
 1. Resolve the latest `completed` index for the repo (409 if none).
 2. Embed the question (`EmbeddingProvider.embed`) and run a pgvector
@@ -183,11 +189,20 @@ lexical approach preserved beneath it as a fallback:
 4. If that also finds nothing, fall back further to a direct symbol-name `ILIKE`
    match mapped to its enclosing chunk.
 5. Build citations (`file_path`, `start_line`, `end_line`, `snippet`) and pass them to
-   `AIProvider.answer_repository_question()` (still `MockAIProvider`'s deterministic
-   template — composition wasn't in scope for this round, only retrieval).
+   `AIProvider.answer_repository_question()`, via `get_real_ai_provider()` — Mock's
+   deterministic template by default, or a real `claude-opus-4-8` call (plain text,
+   no structured output needed for a prose answer) when `ANTHROPIC_API_KEY` is
+   configured. The prompt explicitly instructs the model not to reference code
+   beyond what's in `citations` and to give an honest "no relevant code was found"
+   response when citations is empty, rather than let the model guess from its own
+   training data about a repository it can't see.
 
 Always returns 200 with a graceful "couldn't find relevant code" answer and empty
-citations when nothing matches at any tier — never a 500 for "no match."
+citations when nothing matches at any tier — never a 500 for "no match." Retrieval
+became real in phase 2 and answer composition became real later (phase 6) — two
+separate rounds, not one; automated tests always exercise the mock (see the
+propose-fix section above for why: `get_real_ai_provider()` is overridden to
+`MockAIProvider` in every test fixture regardless of `.env` contents).
 
 ## Architecture graph (`apps/api/src/codemind_api/routers/architecture.py`)
 
@@ -393,6 +408,11 @@ Documented explicitly so it's clear this is scope, not an oversight:
   `COMMENT`; gating merges is the commit status's job, not the review state's.
 - Multi-page PR file fetching — `get_pull_request_files` uses the API's default
   page size; a PR with more files than that isn't handled specially yet.
+- Making indexing-time summarization real (`summarize_file`, `summarize_directory`,
+  `identify_subsystems`) — `ClaudeAIProvider` deliberately doesn't implement these;
+  a real call per file/directory during indexing is a different cost/latency
+  tradeoff than the three on-demand, user-facing calls that are real (propose-fix,
+  PR-review summary, `/ask` answers), and wasn't asked for.
 - Automated test coverage of `ClaudeAIProvider`/`PATGitHubWriteClient` against the
   real Claude/GitHub APIs — deliberately excluded from CI (no network calls in
   tests); covered only by manual verification steps with real credentials,
@@ -421,9 +441,6 @@ Documented explicitly so it's clear this is scope, not an oversight:
   `findings`), but the findings list defaults to the latest run only.
 - ANN vector index (`ivfflat`/`hnsw`) — harmful/meaningless at demo-corpus row
   counts; flagged for when real repo scale exists.
-- Making `answer_repository_question` (the LLM half of `/ask`) real — only
-  *retrieval* became real this round; composition stays on `MockAIProvider`'s
-  deterministic template.
 - Monaco editor — `prism-react-renderer` syntax highlighting plus a symbol outline
   covers this round's "richer source explorer" ask without the complexity of a full
   editor.

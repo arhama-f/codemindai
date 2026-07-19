@@ -12,7 +12,7 @@ from codemind_github_client import MockGitHubWriteClient
 
 from codemind_api.db import SessionLocal, engine, get_db
 from codemind_api.main import create_app
-from codemind_api.providers import get_ai_provider_for_fix, get_github_write_client
+from codemind_api.providers import get_real_ai_provider, get_github_write_client
 from codemind_api.routers.indexing import get_redis_pool
 
 
@@ -61,7 +61,7 @@ async def client(db_session: AsyncSession):
     # automated tests must never call the real Claude or GitHub APIs. Tests
     # that specifically need a seeded MockGitHubWriteClient (e.g. publish
     # staleness checks) override get_github_write_client again themselves.
-    app.dependency_overrides[get_ai_provider_for_fix] = lambda: MockAIProvider()
+    app.dependency_overrides[get_real_ai_provider] = lambda: MockAIProvider()
     app.dependency_overrides[get_github_write_client] = lambda: MockGitHubWriteClient()
 
     transport = ASGITransport(app=app)

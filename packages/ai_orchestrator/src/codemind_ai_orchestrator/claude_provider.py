@@ -28,10 +28,37 @@ FIX_SCHEMA = {
 }
 
 _NOT_IMPLEMENTED_MSG = (
-    "ClaudeAIProvider only implements propose_fix and summarize_pr_review (real "
-    "GitHub-facing generation). Indexing/summarization still runs through "
+    "ClaudeAIProvider only implements propose_fix, summarize_pr_review, and "
+    "answer_repository_question. Indexing-time summarization still runs through "
     "MockAIProvider — see apps/api/src/codemind_api/providers.py."
 )
+
+
+def _extract_text(response: anthropic.types.Message) -> str:
+    content_block = response.content[0]
+    if content_block.type != "text":
+        raise RuntimeError(f"Expected a text content block, got {content_block.type!r}")
+    return content_block.text
+
+
+def _build_ask_prompt(question: str, citations: list[RetrievedChunkDTO]) -> str:
+    if not citations:
+        return (
+            f'A user asked the following question about a codebase, but no relevant code '
+            f'was found:\n\n"{question}"\n\n'
+            "Write a brief, honest response explaining that no relevant code was found for "
+            "this question in the repository. Do not speculate about what the answer might be."
+        )
+    citations_text = "\n\n".join(
+        f"- {c.file_path}:{c.start_line}-{c.end_line}\n```\n{c.snippet}\n```" for c in citations
+    )
+    return (
+        f'A user asked the following question about a codebase:\n\n"{question}"\n\n'
+        f"Here is the relevant code, found via semantic search:\n\n{citations_text}\n\n"
+        "Answer the question directly, citing specific files and line ranges from the "
+        "code above. Do not reference code that isn't shown above. Keep the answer "
+        "focused and concise — a few sentences unless the question needs more detail."
+    )
 
 
 def _build_pr_review_prompt(pr_title: str, findings: list[FindingDraftDTO]) -> str:
@@ -71,14 +98,16 @@ def _build_prompt(finding: FindingDetailDTO, file_content: str) -> str:
 
 
 class ClaudeAIProvider(AIProvider):
-    """Real AI provider backed by the Claude API, used only for `propose_fix`
-    and `summarize_pr_review` — the two places CodeMind writes AI-generated
-    text to a real GitHub PR (see docs/architecture.md). Never exercised by
-    the automated test suite; wired in only when ANTHROPIC_API_KEY is set.
+    """Real AI provider backed by the Claude API: `propose_fix` and
+    `summarize_pr_review` write AI-generated text to a real GitHub PR;
+    `answer_repository_question` composes a real answer over already-real
+    (embedding-based) retrieval for `/ask` (see docs/architecture.md). Never
+    exercised by the automated test suite; wired in only when
+    ANTHROPIC_API_KEY is set.
 
     The other AIProvider methods are intentionally not implemented here —
-    indexing/summarization stays on MockAIProvider, and faking those calls on
-    this provider would misrepresent what's actually AI-backed.
+    indexing-time summarization stays on MockAIProvider, and faking those
+    calls on this provider would misrepresent what's actually AI-backed.
     """
 
     def __init__(self, *, api_key: str, model: str = DEFAULT_MODEL) -> None:
@@ -101,7 +130,12 @@ class ClaudeAIProvider(AIProvider):
     async def answer_repository_question(
         self, *, question: str, citations: list[RetrievedChunkDTO]
     ) -> str:
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
+        response = await self._client.messages.create(
+            model=self._model,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": _build_ask_prompt(question, citations)}],
+        )
+        return _extract_text(response)
 
     async def propose_fix(
         self, *, finding: FindingDetailDTO, file_content: str
@@ -112,10 +146,7 @@ class ClaudeAIProvider(AIProvider):
             output_config={"format": {"type": "json_schema", "schema": FIX_SCHEMA}},
             messages=[{"role": "user", "content": _build_prompt(finding, file_content)}],
         )
-        content_block = response.content[0]
-        if content_block.type != "text":
-            raise RuntimeError(f"Expected a text content block, got {content_block.type!r}")
-        result = json.loads(content_block.text)
+        result = json.loads(_extract_text(response))
         return ProposedFixDTO(**result)
 
     async def summarize_pr_review(
@@ -128,7 +159,4 @@ class ClaudeAIProvider(AIProvider):
                 {"role": "user", "content": _build_pr_review_prompt(pr_title, findings)}
             ],
         )
-        content_block = response.content[0]
-        if content_block.type != "text":
-            raise RuntimeError(f"Expected a text content block, got {content_block.type!r}")
-        return content_block.text
+        return _extract_text(response)

@@ -37,11 +37,12 @@ def get_github_write_client() -> GitHubWriteClient:
 
 
 @lru_cache
-def get_ai_provider_for_fix() -> AIProvider:
+def get_real_ai_provider() -> AIProvider:
     """Real Claude-backed provider only when ANTHROPIC_API_KEY is configured
     — otherwise the deterministic mock. Separate from get_ai_provider() because
-    ClaudeAIProvider only implements propose_fix and summarize_pr_review — the
-    two places CodeMind writes AI-generated text to a real GitHub PR."""
+    ClaudeAIProvider only implements propose_fix, summarize_pr_review, and
+    answer_repository_question — the three places CodeMind generates
+    user-facing text from a real model rather than a template."""
     if settings.anthropic_api_key:
         return ClaudeAIProvider(api_key=settings.anthropic_api_key)
     return MockAIProvider()
