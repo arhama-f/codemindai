@@ -389,6 +389,59 @@ independent of any single request's session — this matters for tests too: writ
 through a rollback-wrapped test session are invisible to the SSE endpoint's own
 connections, so SSE tests use a real (non-rollback) session end-to-end.
 
+## Committed Playwright E2E suite (`apps/web/e2e/`, `apps/web/playwright.config.ts`)
+
+Every round through phase 6 was manually verified with ad-hoc, one-off Playwright
+scripts (the raw `playwright` library, not `@playwright/test`) that were deleted
+after each round. This turns that into a permanent, repo-committed,
+CI-runnable suite.
+
+**Three-server orchestration.** `playwright.config.ts`'s `webServer` array starts
+and tears down FastAPI, the Next.js dev server, and the arq worker itself — no
+need to have any of them already running. The worker has no HTTP endpoint to
+health-check, so it uses Playwright's `wait: { stderr: /Starting worker for \d+
+functions/ }` readiness mode (matching arq's actual startup log line) instead of
+`url`/`port`, with `gracefulShutdown: { signal: "SIGTERM" }` so
+`codemind_worker.deps.shutdown()` (DB engine disposal) actually runs on teardown
+rather than a bare SIGKILL.
+
+**Never calls a real external API.** The FastAPI `webServer` entry explicitly
+sets `ANTHROPIC_API_KEY`/`GITHUB_PAT`/`GITHUB_TARGET_OWNER`/`GITHUB_TARGET_REPO`
+to empty strings for its own process — verified empirically that a real,
+non-empty value in `apps/api/.env` (as this environment has, from prior
+real-credentials verification rounds) is overridden by these explicit process
+env vars, not the other way around. The worker needs no such gating: it's
+structurally hardcoded to `MockGitHubClient`/`MockAIProvider`
+(`apps/worker/src/codemind_worker/deps.py`) regardless of any env var.
+
+**A fourth, dedicated database.** `codemind_e2e` (alongside `codemind` and
+`codemind_test`) — real rows persist (unlike pytest's rollback-per-test), but
+isolated from the primary dev database so running the suite repeatedly doesn't
+bloat the DB a developer is using for manual spot-checks. Every test uses a
+randomized email *and* organization name — `Organization.slug` is globally
+unique, not just `User.email`, so a fixed org name would eventually collide
+across repeated runs.
+
+**One long flow test, not many independent ones.** `full-flow.spec.ts` covers
+register → org → connect GitHub (mock) + add the demo repo → real SSE-backed
+indexing → explore files → real semantic `/ask` → real SSE-backed analysis →
+findings → propose a fix → attempt publish (asserts the graceful "not
+configured" error, since no real GitHub target is set) → dismiss a different
+finding → attempt a PR review (same graceful error) as one `test()` with
+`test.step()` per phase. Splitting into independent tests would mean either
+re-paying the real indexing/analysis cost per test or introducing test-ordering
+dependencies Playwright discourages — this is a smoke/regression suite for a
+genuinely linear user journey, not a unit-test surface. `edge-cases.spec.ts`
+complements it with two fast, fully independent checks (duplicate-email
+registration; unauthenticated org access) that don't touch the pipeline at all.
+
+**CI**: `.github/workflows/e2e.yml` runs the same suite on every push to `main`
+via GitHub Actions — `docker compose up -d --wait`, migrate `codemind_e2e`,
+install both `apps/api` and `apps/worker`'s Python deps, cache
+`~/.cache/huggingface` (the one genuinely-external, if one-time-per-cache-key,
+network dependency in an otherwise all-mock suite), `npx playwright install
+--with-deps chromium`, run the suite. No secrets required.
+
 ## Deferred to later phases
 
 Documented explicitly so it's clear this is scope, not an oversight:
@@ -446,10 +499,6 @@ Documented explicitly so it's clear this is scope, not an oversight:
   editor.
 - Multi-branch/commit history, PR diffing — single synthetic branch+commit per demo
   repo.
-- Playwright as a committed, CI-running E2E suite — every flow (including phase 2's
-  architecture graph and semantic `/ask`) was verified manually with one-off
-  Playwright scripts during development (see `docs/setup.md`), but no browser E2E
-  test is committed to the repo yet.
 - Rate limiting, billing/usage, audit logging, notifications, granular RBAC.
 
 ## Known local-port remaps

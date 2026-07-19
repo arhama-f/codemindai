@@ -16,8 +16,12 @@ docker compose ps   # both should show "healthy"
 This maps Postgres to host port **5433** and Redis to host port **6380** (not the
 defaults — see [architecture.md](architecture.md#known-local-port-remaps)) and runs
 `infrastructure/docker/postgres/init-extensions.sql` once, which creates the
-`codemind` and `codemind_test` databases with the `vector`, `pgcrypto`, and `pg_trgm`
-extensions enabled in both.
+`codemind`, `codemind_test`, and `codemind_e2e` databases with the `vector`,
+`pgcrypto`, and `pg_trgm` extensions enabled in all three. `codemind_test` is used
+by the pytest suite (rollback-per-test, never persists); `codemind_e2e` is used by
+the Playwright suite (see step 7) — kept separate from the primary `codemind` dev
+database so running the E2E suite repeatedly doesn't bloat the database you're
+using for manual testing.
 
 ## 2. Backend — API
 
@@ -90,7 +94,41 @@ cd apps/web && npx vitest run
 cd apps/web && npx tsc --noEmit
 ```
 
-## 6. Try the full flow
+## 6. Run the E2E suite
+
+A committed Playwright suite (`apps/web/e2e/`) covers the full user-facing flow
+end-to-end against the real stack — register → create org → connect GitHub
+(mock) → add the demo repo → run indexing (real SSE-backed arq job) → explore
+files → ask a question (real semantic retrieval, mock-templated answer) → run
+analysis (real SSE-backed job) → findings → propose a fix → attempt to publish
+(expects the graceful "not configured" error, since no real GitHub target is
+set) → dismiss a different finding → attempt a PR review (same graceful
+"not configured" error) — plus a couple of fast, independent edge-case tests
+(duplicate-email registration, unauthenticated access leaks no data).
+
+It needs Postgres/Redis running (step 1) and migrations applied to the
+dedicated `codemind_e2e` database:
+
+```bash
+cd apps/api
+ALEMBIC_DATABASE_URL="postgresql+psycopg2://codemind:codemind@localhost:5433/codemind_e2e" \
+  alembic upgrade head
+
+cd ../../apps/web
+npx playwright install --with-deps chromium   # one-time
+npm run test:e2e   # or: npx playwright test
+```
+
+`playwright.config.ts` starts and tears down all three servers itself (API,
+worker, Next.js) via its `webServer` config — you don't need `apps/api`,
+`apps/worker`, or `apps/web` already running, though it will reuse them if
+they are (`reuseExistingServer: !process.env.CI`). It forces
+`ANTHROPIC_API_KEY`/`GITHUB_PAT`/`GITHUB_TARGET_OWNER`/`GITHUB_TARGET_REPO` to
+empty for its own API process regardless of what's in `apps/api/.env` — the
+suite never calls a real external API, matching every other round's automated
+tests. Also runs in CI on every push — see `.github/workflows/e2e.yml`.
+
+## 7. Try the full flow
 
 1. Register at `/register`, create an organization at `/orgs/new`.
 2. On the organization page, click **Connect GitHub (mock)**, then **Add** the
@@ -170,9 +208,7 @@ cd ../../packages/api-client && npm run generate
 ## Known limitations
 
 - No Dockerfiles for `apps/api`/`apps/worker`/`apps/web` yet — they run natively.
-- No committed browser E2E test suite — the onboarding→ask flow was verified with a
-  one-off local Playwright script during development, not a repo-committed test.
 - Mock GitHub/AI providers by default — real `ClaudeAIProvider`/`PATGitHubWriteClient`
-  are wired in but only used for `propose_fix`/publish, and only when real
-  credentials are configured (see "Real credentials" above). See
+  are wired in but only used for `propose_fix`/publish/PR-review/`/ask`, and only
+  when real credentials are configured (see "Real credentials" above). See
   `docs/architecture.md` for what else is deferred and why.
