@@ -129,6 +129,14 @@ export default function OrganizationDetailPage() {
       </section>
 
       <section className="mt-8">
+        <div className="mb-2 flex justify-end">
+          <Link
+            href={`/orgs/${orgId}/pr-reviews`}
+            className="text-sm text-gray-500 hover:text-gray-300"
+          >
+            View past reviews &rarr;
+          </Link>
+        </div>
         <PRReviewPanel orgId={orgId} />
       </section>
     </main>

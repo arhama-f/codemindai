@@ -126,6 +126,9 @@ class _StubAIProvider(AIProvider):
     async def summarize_pr_review(self, **kwargs):
         raise NotImplementedError
 
+    async def explain_finding(self, **kwargs):
+        raise NotImplementedError
+
 
 async def test_ask_uses_whatever_get_real_ai_provider_returns(
     db_session: AsyncSession, index_repository_directly

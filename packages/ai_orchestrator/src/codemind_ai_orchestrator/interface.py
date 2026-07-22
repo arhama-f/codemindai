@@ -36,6 +36,9 @@ class AIProvider(ABC):
     ) -> ProposedFixDTO: ...
 
     @abstractmethod
+    async def explain_finding(self, *, finding: FindingDetailDTO) -> str: ...
+
+    @abstractmethod
     async def summarize_pr_review(
         self, *, pr_title: str, findings: list[FindingDraftDTO]
     ) -> str: ...

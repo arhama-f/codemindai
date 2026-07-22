@@ -1,5 +1,11 @@
 from codemind_ai_orchestrator import MockAIProvider
-from codemind_shared_types.schemas import FileSummaryDTO, ParsedSymbol, RetrievedChunkDTO
+from codemind_shared_types.schemas import (
+    FileSummaryDTO,
+    FindingDetailDTO,
+    FindingEvidenceDTO,
+    ParsedSymbol,
+    RetrievedChunkDTO,
+)
 
 provider = MockAIProvider()
 
@@ -78,3 +84,28 @@ async def test_answer_repository_question_with_citations():
 async def test_answer_repository_question_with_no_citations():
     answer = await provider.answer_repository_question(question="what does nothing do?", citations=[])
     assert answer == "I couldn't find relevant code for that question in this repository."
+
+
+async def test_explain_finding_includes_check_id_and_evidence_locations():
+    finding = FindingDetailDTO(
+        check_id="unsafe-division",
+        category="bug",
+        title="Unguarded division",
+        severity="high",
+        confidence="medium",
+        explanation="`divide` divides by `b` without checking it is non-zero.",
+        recommended_fix="Add a guard: if (b === 0) return 0; before the division.",
+        file_path="src/utils/math.ts",
+        start_line=14,
+        end_line=16,
+        evidence=[
+            FindingEvidenceDTO(
+                file_path="src/utils/math.ts", start_line=14, end_line=16, snippet="return a / b;"
+            )
+        ],
+    )
+    explanation = await provider.explain_finding(finding=finding)
+    assert "unsafe-division" in explanation
+    assert "bug/high" in explanation
+    assert "src/utils/math.ts:14-16" in explanation
+    assert finding.explanation in explanation

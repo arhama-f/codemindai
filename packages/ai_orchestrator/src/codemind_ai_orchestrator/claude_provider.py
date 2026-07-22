@@ -28,9 +28,10 @@ FIX_SCHEMA = {
 }
 
 _NOT_IMPLEMENTED_MSG = (
-    "ClaudeAIProvider only implements propose_fix, summarize_pr_review, and "
-    "answer_repository_question. Indexing-time summarization still runs through "
-    "MockAIProvider — see apps/api/src/codemind_api/providers.py."
+    "ClaudeAIProvider only implements propose_fix, summarize_pr_review, "
+    "explain_finding, and answer_repository_question. Indexing-time "
+    "summarization still runs through MockAIProvider — see "
+    "apps/api/src/codemind_api/providers.py."
 )
 
 
@@ -97,13 +98,34 @@ def _build_prompt(finding: FindingDetailDTO, file_content: str) -> str:
     )
 
 
+def _build_explain_prompt(finding: FindingDetailDTO) -> str:
+    evidence_text = "\n".join(
+        f"- {e.file_path}:{e.start_line}-{e.end_line}\n  {e.snippet}" for e in finding.evidence
+    )
+    return (
+        f"You are explaining a {finding.category} finding in a TypeScript codebase to a "
+        "developer who will decide whether and how to fix it.\n\n"
+        f"Check: {finding.check_id}\n"
+        f"Title: {finding.title}\n"
+        f"Severity: {finding.severity} (confidence: {finding.confidence})\n"
+        f"Template explanation: {finding.explanation}\n"
+        f"Template recommended fix: {finding.recommended_fix}\n\n"
+        f"Evidence:\n{evidence_text}\n\n"
+        "Write a deeper explanation (a short paragraph) of why this is a real problem here "
+        "specifically — the concrete failure mode or real-world impact given this evidence, "
+        "not a generic description of the check. Do not repeat the template text verbatim. "
+        "Return only the explanation text, no headers or preamble."
+    )
+
+
 class ClaudeAIProvider(AIProvider):
     """Real AI provider backed by the Claude API: `propose_fix` and
     `summarize_pr_review` write AI-generated text to a real GitHub PR;
     `answer_repository_question` composes a real answer over already-real
-    (embedding-based) retrieval for `/ask` (see docs/architecture.md). Never
-    exercised by the automated test suite; wired in only when
-    ANTHROPIC_API_KEY is set.
+    (embedding-based) retrieval for `/ask`; `explain_finding` composes a
+    deeper, evidence-specific explanation for a single finding (see
+    docs/architecture.md). Never exercised by the automated test suite;
+    wired in only when ANTHROPIC_API_KEY is set.
 
     The other AIProvider methods are intentionally not implemented here —
     indexing-time summarization stays on MockAIProvider, and faking those
@@ -158,5 +180,13 @@ class ClaudeAIProvider(AIProvider):
             messages=[
                 {"role": "user", "content": _build_pr_review_prompt(pr_title, findings)}
             ],
+        )
+        return _extract_text(response)
+
+    async def explain_finding(self, *, finding: FindingDetailDTO) -> str:
+        response = await self._client.messages.create(
+            model=self._model,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": _build_explain_prompt(finding)}],
         )
         return _extract_text(response)

@@ -371,6 +371,22 @@ class ProposedChange(UUIDPKMixin, CreatedAtMixin, Base):
     )
 
 
+class FindingExplanation(UUIDPKMixin, CreatedAtMixin, Base):
+    __tablename__ = "finding_explanations"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
+    )
+    finding_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("findings.id"), nullable=False
+    )
+
+    explanation: Mapped[str] = mapped_column(Text, nullable=False)
+    generated_by: Mapped[str] = mapped_column(
+        String, CheckConstraint("generated_by in ('mock','claude')"), nullable=False
+    )
+
+
 class PRReview(UUIDPKMixin, CreatedAtMixin, Base):
     __tablename__ = "pr_reviews"
 

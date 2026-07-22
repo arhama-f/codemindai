@@ -91,6 +91,16 @@ class MockAIProvider(AIProvider):
             test_file_content=None,
         )
 
+    async def explain_finding(self, *, finding: FindingDetailDTO) -> str:
+        locations = ", ".join(
+            f"{e.file_path}:{e.start_line}-{e.end_line}" for e in finding.evidence
+        )
+        locations_part = locations or f"{finding.file_path}:{finding.start_line}-{finding.end_line}"
+        return (
+            f"Mock explanation for `{finding.check_id}` ({finding.category}/{finding.severity}): "
+            f"{finding.explanation} Evidence: {locations_part}."
+        )
+
     async def summarize_pr_review(
         self, *, pr_title: str, findings: list[FindingDraftDTO]
     ) -> str:

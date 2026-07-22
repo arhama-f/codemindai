@@ -442,6 +442,48 @@ install both `apps/api` and `apps/worker`'s Python deps, cache
 network dependency in an otherwise all-mock suite), `npx playwright install
 --with-deps chromium`, run the suite. No secrets required.
 
+## Real LLM finding enrichment, PR review history, and Docker
+
+Three additions built together in one round:
+
+- **`AIProvider.explain_finding()`** — mirrors `propose_fix`'s shape exactly: a
+  separate `finding_explanations` table (not columns bolted onto `Finding`),
+  a `POST .../findings/{finding_id}/explain` endpoint persisting one row per
+  request, and a `FindingExplanationPanel` "Explain with AI" button on the
+  finding detail page. `ClaudeAIProvider.explain_finding` asks for a deeper,
+  evidence-specific explanation (not a fix) via a plain-text Claude call;
+  `MockAIProvider.explain_finding` is deterministic, matching every other
+  round's Mock-by-default discipline.
+- **PR review history/list UI** — `GET /api/organizations/{org_id}/pr-reviews`
+  (unpaginated, org-scoped, newest first — same shape as the existing
+  repositories/findings list endpoints), plus `apps/web/app/orgs/[orgId]/pr-reviews/`
+  list and detail pages, linked from the org page's "View past reviews" link.
+- **Containerized `apps/api`/`apps/worker`/`apps/web`** — `Dockerfile`s for all
+  three, opt-in via `docker compose --profile full up -d --build` (plain
+  `docker compose up -d`, used by local dev and `.github/workflows/e2e.yml`,
+  is untouched — still Postgres+Redis only). Build context is the repo root
+  for all three, preserving the monorepo-relative paths `apps/api`/`apps/worker`'s
+  `requirements.txt` and `config.py`'s `REPO_ROOT`-based defaults depend on.
+  `apps/web`'s Dockerfile uses Next.js `output: "standalone"` (added to
+  `next.config.ts`, no effect on `next dev`).
+
+  Verification status, reported honestly: the `web` image built and exported
+  successfully in a real `docker compose build`. Building `api`/`worker`
+  caught a real bug — `packages/code_parser`'s `tree-sitter` dependency has no
+  prebuilt wheel for every platform and compiles from source, needing a C
+  compiler that `python:3.13-slim` doesn't include by default (GitHub Actions
+  runners do, which is why this never surfaced in CI) — fixed by installing
+  `build-essential` in both Dockerfiles before the pip install step. A full
+  local `docker compose --profile full up --build` for `api`/`worker`
+  specifically could not be completed in this session: the dev machine's disk
+  repeatedly dropped to under 1GB free during the `torch`+CUDA dependency
+  downloads (each image pulls ~870MB of them) and crashed Docker Desktop's
+  daemon multiple times. The Dockerfiles use the identical install sequence
+  already verified working in `.github/workflows/e2e.yml`'s CI runs, so the
+  design is sound, but a real end-to-end containerized boot of `api`/`worker`
+  is still an open verification step — attempt it again once there's several
+  GB of free disk headroom, via `docker compose --profile full up -d --build`.
+
 ## Deferred to later phases
 
 Documented explicitly so it's clear this is scope, not an oversight:
@@ -455,8 +497,6 @@ Documented explicitly so it's clear this is scope, not an oversight:
   Full PR review section above).
 - Syncing an updated fix back to an already-published PR (re-publish/amend flow) —
   phase 4 is first-publish-only; amending is a distinct feature.
-- PR review history/list UI — schema supports it (`GET /pr-reviews/{id}` +
-  `organization_id` scoping), but no list endpoint/page this round.
 - Approve/request-changes PR review events — reviews are always posted as
   `COMMENT`; gating merges is the commit status's job, not the review state's.
 - Multi-page PR file fetching — `get_pull_request_files` uses the API's default
@@ -487,9 +527,6 @@ Documented explicitly so it's clear this is scope, not an oversight:
   injection) — the TS demo fixture has no DB/HTTP/filesystem-access code to genuinely
   trigger these; faking them would mean synthetic code paths that never exist in the
   actual served repo.
-- `AIProvider`-based finding enrichment (e.g. an `explain_finding()` method) — the 9
-  checks' explanation/fix/test text are plain templates built from evidence; wiring in
-  real LLM enrichment is a clean future addition, not built this round.
 - Multi-run findings history UI — the schema supports it (`analysis_run_id` FK on
   `findings`), but the findings list defaults to the latest run only.
 - ANN vector index (`ivfflat`/`hnsw`) — harmful/meaningless at demo-corpus row

@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { apiClient } from "@/lib/apiClient";
 import { DismissFindingForm } from "@/components/DismissFindingForm";
+import { FindingExplanationPanel } from "@/components/FindingExplanationPanel";
 import { ProposedFixPanel } from "@/components/ProposedFixPanel";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { SourceViewer } from "@/components/SourceViewer";
@@ -76,6 +77,8 @@ export default function FindingDetailPage() {
       <h1 className="mb-4 text-2xl font-semibold">{finding.title}</h1>
 
       <p className="mb-4 text-gray-300">{finding.explanation}</p>
+
+      <FindingExplanationPanel orgId={orgId} repoId={repoId} findingId={findingId} />
 
       <div className="mb-4 rounded border border-gray-800 p-4">
         <h2 className="mb-1 text-sm font-medium text-gray-500">Recommended fix</h2>

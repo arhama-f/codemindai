@@ -8,6 +8,7 @@ from codemind_shared_types.models import PRReview, User
 from codemind_shared_types.schemas import FindingDraftDTO, ReviewCommentDTO
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from codemind_api.config import settings
@@ -174,6 +175,21 @@ async def review_pull_request(
     await db.refresh(pr_review)
 
     return _to_response(pr_review)
+
+
+@router.get("", response_model=list[PRReviewResponse])
+async def list_pr_reviews(
+    org_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _membership=Depends(get_org_membership),
+) -> list[PRReviewResponse]:
+    stmt = (
+        select(PRReview)
+        .where(PRReview.organization_id == org_id)
+        .order_by(PRReview.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    return [_to_response(pr_review) for pr_review in result.scalars().all()]
 
 
 @router.get("/{pr_review_id}", response_model=PRReviewResponse)

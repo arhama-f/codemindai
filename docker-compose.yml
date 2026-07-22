@@ -26,5 +26,55 @@ services:
       timeout: 5s
       retries: 10
 
+  # Containerized apps/api, apps/worker, apps/web — opt-in via
+  # `docker compose --profile full up -d --build`, not started by plain
+  # `docker compose up -d` (which docs/setup.md's native-dev flow and
+  # .github/workflows/e2e.yml both depend on staying postgres+redis-only).
+  api:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8010:8010"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://codemind:codemind@postgres:5432/codemind
+      REDIS_URL: redis://redis:6379/0
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GITHUB_PAT: ${GITHUB_PAT:-}
+      GITHUB_TARGET_OWNER: ${GITHUB_TARGET_OWNER:-}
+      GITHUB_TARGET_REPO: ${GITHUB_TARGET_REPO:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://codemind:codemind@postgres:5432/codemind
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8010
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
 volumes:
   codemind_postgres_data:

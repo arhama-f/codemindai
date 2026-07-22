@@ -100,10 +100,12 @@ A committed Playwright suite (`apps/web/e2e/`) covers the full user-facing flow
 end-to-end against the real stack — register → create org → connect GitHub
 (mock) → add the demo repo → run indexing (real SSE-backed arq job) → explore
 files → ask a question (real semantic retrieval, mock-templated answer) → run
-analysis (real SSE-backed job) → findings → propose a fix → attempt to publish
-(expects the graceful "not configured" error, since no real GitHub target is
-set) → dismiss a different finding → attempt a PR review (same graceful
-"not configured" error) — plus a couple of fast, independent edge-case tests
+analysis (real SSE-backed job) → findings → explain a finding with AI
+(Mock-templated) → propose a fix → attempt to publish (expects the graceful
+"not configured" error, since no real GitHub target is set) → dismiss a
+different finding → attempt a PR review (same graceful "not configured"
+error) → confirm the PR review history page loads (empty, since the attempt
+above never persisted) — plus a couple of fast, independent edge-case tests
 (duplicate-email registration, unauthenticated access leaks no data).
 
 It needs Postgres/Redis running (step 1) and migrations applied to the
@@ -152,14 +154,42 @@ tests. Also runs in CI on every push — see `.github/workflows/e2e.yml`.
 8. Back in **Explore files**, open `src/utils/math.ts`, and click **impact** next to
    the `divide` symbol in the outline — it should show `src/index.ts` as a direct,
    `confirmed_static` dependent.
-9. On a finding's detail page, click **Propose fix** — a mock-generated explanation
-   and a side-by-side original/proposed diff should appear. Click **Publish as draft
-   PR**, then **Confirm publish** — without real credentials configured (see below),
-   this correctly shows *"No publish target configured"* rather than silently
-   succeeding.
+9. On a finding's detail page, click **Explain with AI** — a deeper,
+   evidence-specific explanation appears (Mock-templated by default; real
+   Claude output with `ANTHROPIC_API_KEY` set), separate from the template
+   explanation above it. Then click **Propose fix** — a mock-generated
+   explanation and a side-by-side original/proposed diff should appear. Click
+   **Publish as draft PR**, then **Confirm publish** — without real
+   credentials configured (see below), this correctly shows *"No publish
+   target configured"* rather than silently succeeding.
 10. Back on the organization page, under **Review a GitHub PR**, enter a PR number
     and click **Review PR**, then **Confirm review** — same as step 9, without real
     credentials this correctly shows *"No target repo configured"*.
+11. Click **View past reviews** to see the PR review history list (empty until
+    a review with real credentials configured actually completes and
+    persists); click into one to see its full detail page.
+
+## Docker (optional, containerized)
+
+`apps/api`, `apps/worker`, and `apps/web` each have a `Dockerfile`, opt-in via
+a Compose profile — plain `docker compose up -d` (used above and by
+`.github/workflows/e2e.yml`) is unaffected and still only starts
+Postgres/Redis:
+
+```bash
+docker compose --profile full up -d --build
+```
+
+This builds and starts all five services together (Postgres, Redis, API on
+`:8010`, worker, web on `:3000`), migrating the `codemind` database
+automatically on the API container's boot. Real credentials
+(`ANTHROPIC_API_KEY`/`GITHUB_PAT`/`GITHUB_TARGET_OWNER`/`GITHUB_TARGET_REPO`)
+pass through from your shell environment if set, otherwise stay empty/Mock —
+same default as native dev.
+
+Building `apps/api`/`apps/worker` downloads `torch` and its CUDA dependencies
+(~870MB each, from `packages/embedding_provider`) — expect this to take a
+while and need several GB of free disk on the first build.
 
 ## Real credentials for propose-fix / publish / PR review / `/ask` (optional)
 
@@ -207,8 +237,14 @@ cd ../../packages/api-client && npm run generate
 
 ## Known limitations
 
-- No Dockerfiles for `apps/api`/`apps/worker`/`apps/web` yet — they run natively.
 - Mock GitHub/AI providers by default — real `ClaudeAIProvider`/`PATGitHubWriteClient`
-  are wired in but only used for `propose_fix`/publish/PR-review/`/ask`, and only
-  when real credentials are configured (see "Real credentials" above). See
+  are wired in but only used for `propose_fix`/publish/PR-review/`/ask`/`explain_finding`,
+  and only when real credentials are configured (see "Real credentials" above). See
   `docs/architecture.md` for what else is deferred and why.
+- Containerized `apps/api`/`apps/worker` (see "Docker" above) haven't been
+  built and booted end-to-end in this repo's own dev environment — the
+  Dockerfiles use the same install steps already verified working in CI, and
+  `apps/web`'s image builds and runs successfully, but a full local
+  `docker compose --profile full up --build` for `api`/`worker` needs more
+  disk headroom than was available when this was last attempted (see
+  `docs/architecture.md`).

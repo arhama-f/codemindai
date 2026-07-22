@@ -7,6 +7,7 @@ from codemind_ai_orchestrator.claude_provider import (
     FIX_SCHEMA,
     ClaudeAIProvider,
     _build_ask_prompt,
+    _build_explain_prompt,
     _build_pr_review_prompt,
     _build_prompt,
 )
@@ -89,6 +90,15 @@ def test_build_ask_prompt_with_no_citations_asks_for_an_honest_no_match_response
     assert "what does this repo do?" in prompt
     assert "no relevant code was found" in prompt
     assert "Do not speculate" in prompt
+
+
+def test_build_explain_prompt_includes_finding_and_evidence():
+    prompt = _build_explain_prompt(FINDING)
+    assert "unsafe-division" in prompt
+    assert "src/utils/math.ts" in prompt
+    assert "return a / b;" in prompt
+    assert FINDING.explanation in prompt
+    assert "Do not repeat the template text verbatim" in prompt
 
 
 def test_build_pr_review_prompt_includes_title_and_findings():

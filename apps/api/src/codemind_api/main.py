@@ -12,6 +12,7 @@ from codemind_api.routers import (
     ask,
     auth,
     files,
+    finding_explanations,
     findings,
     github,
     impact,
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
     app.include_router(findings.router)
     app.include_router(impact.router)
     app.include_router(proposed_changes.router)
+    app.include_router(finding_explanations.router)
     app.include_router(pr_review.router)
 
     return app
