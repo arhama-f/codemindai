@@ -14,11 +14,18 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
+# packages/embedding_provider depends on sentence-transformers, which pulls in
+# torch. Plain `pip install` on Linux resolves the full CUDA build (several GB
+# of nvidia_* wheels) even though this container has no GPU — install the
+# CPU-only build first so later installs are already satisfied.
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
 COPY packages/shared_types packages/shared_types
 COPY packages/github_client packages/github_client
 COPY packages/code_parser packages/code_parser
 COPY packages/ai_orchestrator packages/ai_orchestrator
 COPY packages/embedding_provider packages/embedding_provider
+COPY packages/analysis_engine packages/analysis_engine
 COPY apps/api apps/api
 COPY fixtures fixtures
 
@@ -27,7 +34,8 @@ RUN pip install --no-cache-dir \
     -e packages/github_client \
     -e packages/code_parser \
     -e packages/ai_orchestrator \
-    -e packages/embedding_provider
+    -e packages/embedding_provider \
+    -e packages/analysis_engine
 # cd first: pip resolves a requirements file's relative `-e ../../packages/...`
 # entries against the working directory, not the file's own location.
 RUN cd apps/api && pip install --no-cache-dir -r requirements.txt -e .

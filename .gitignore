@@ -15,6 +15,10 @@ dist/
 build/
 *.tsbuildinfo
 
+# iCloud-exclusion targets (see RESTART_HANDOFF.md) — real dirs behind the
+# node_modules/.venv/.next symlinks above; not matched by those patterns.
+*.nosync/
+
 # Playwright
 apps/web/playwright-report/
 apps/web/test-results/
