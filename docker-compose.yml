@@ -37,13 +37,11 @@ services:
       dockerfile: apps/api/Dockerfile
     ports:
       - "8010:8010"
+    env_file:
+      - apps/api/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://codemind:codemind@postgres:5432/codemind
       REDIS_URL: redis://redis:6379/0
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      GITHUB_PAT: ${GITHUB_PAT:-}
-      GITHUB_TARGET_OWNER: ${GITHUB_TARGET_OWNER:-}
-      GITHUB_TARGET_REPO: ${GITHUB_TARGET_REPO:-}
     depends_on:
       postgres:
         condition: service_healthy
