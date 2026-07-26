@@ -102,6 +102,10 @@ test("register through indexing, findings, propose-fix, publish, and PR review",
   await test.step("dismiss a different finding", async () => {
     await page.goto(`/orgs/${orgId}/repos/${repoId}/findings`);
     const findingLinks = page.locator('a[href*="/findings/"]');
+    // The findings list loads asynchronously after navigation; .count() has
+    // no built-in wait (unlike .click()/.waitFor()), so without this the
+    // count can be read before the fetch+render finishes.
+    await expect(findingLinks.first()).toBeVisible();
     const count = await findingLinks.count();
     let dismissedOne = false;
     for (let i = 0; i < count; i++) {
