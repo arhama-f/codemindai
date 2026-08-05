@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from codemind_api.db import get_db
 from codemind_api.deps import get_current_user, get_org_membership
-from codemind_shared_types.models import Organization, OrganizationMember, User
+from codemind_shared_types.models import Organization, OrganizationMember, Subscription, User
 
 router = APIRouter(prefix="/api/organizations", tags=["organizations"])
 
@@ -52,6 +52,7 @@ async def create_organization(
 
     membership = OrganizationMember(organization_id=organization.id, user_id=user.id, role="owner")
     db.add(membership)
+    db.add(Subscription(organization_id=organization.id, plan="free", status="active"))
     await db.commit()
     await db.refresh(organization)
 

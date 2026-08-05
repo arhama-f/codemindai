@@ -226,6 +226,38 @@ as returned by the API (no CodeMind-index-relative stripping to undo). Reviewing
 PR also creates real writes (a review comment + a commit status) on that PR — same
 one-off, never-automated verification approach as publish.
 
+## Real credentials for email verification, OAuth login, and billing (optional)
+
+By default: verification/reset emails go to `MockEmailProvider` (logged to the
+API's console, inspectable via `/api/testing/last-email` when
+`EXPOSE_TEST_ENDPOINTS=true`); OAuth login buttons return `501` when clicked;
+billing checkout/portal also return `501`. Nothing here is required for local
+dev or the automated test suite. To exercise the real integrations, set in
+`apps/api/.env` and restart the API server:
+
+```bash
+# Email (Resend) — enables real verification/reset emails
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=noreply@yourdomain.com
+
+# OAuth login — register redirect URIs matching API_ORIGIN/api/auth/oauth/{provider}/callback
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GITHUB_OAUTH_CLIENT_ID=...
+GITHUB_OAUTH_CLIENT_SECRET=...
+API_ORIGIN=http://localhost:8010   # must match what's registered with each provider
+
+# Stripe billing
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...    # from `stripe listen` or the Stripe dashboard
+STRIPE_PRICE_ID_PRO=price_...
+STRIPE_PRICE_ID_TEAM=price_...
+```
+
+None of these are exercised by the automated test suite (Stripe SDK calls are
+monkeypatched in `test_billing.py`/`test_stripe_webhooks.py`); treat real
+checkout/OAuth as manual, one-off verification.
+
 ## Regenerating the API client after backend changes
 
 Whenever routes change, re-export the OpenAPI schema and regenerate the TS client:

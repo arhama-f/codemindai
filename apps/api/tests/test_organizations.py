@@ -25,6 +25,18 @@ async def test_create_organization_makes_creator_owner(client: AsyncClient):
     assert orgs[0]["role"] == "owner"
 
 
+async def test_create_organization_gets_a_free_subscription(client: AsyncClient):
+    await _register(client, "billing-owner@example.com")
+
+    created = await client.post("/api/organizations", json={"name": "Billed Corp"})
+    org_id = created.json()["id"]
+
+    billing = await client.get(f"/api/organizations/{org_id}/billing")
+    assert billing.status_code == 200
+    assert billing.json()["plan"] == "free"
+    assert billing.json()["status"] == "active"
+
+
 async def test_duplicate_organization_name_gets_unique_slug(client: AsyncClient):
     await _register(client, "dup@example.com")
 

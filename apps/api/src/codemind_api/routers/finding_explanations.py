@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from codemind_api.db import get_db
-from codemind_api.deps import get_org_membership
+from codemind_api.deps import get_org_membership, require_within_plan_limit
 from codemind_api.providers import get_real_ai_provider
 
 router = APIRouter(prefix="/api/organizations/{org_id}/repositories/{repo_id}", tags=["finding-explanations"])
@@ -63,6 +63,7 @@ async def explain_finding(
     db: AsyncSession = Depends(get_db),
     ai_provider: AIProvider = Depends(get_real_ai_provider),
     _membership=Depends(get_org_membership),
+    _plan_limit=Depends(require_within_plan_limit("ai_actions_per_month")),
 ) -> FindingExplanationResponse:
     finding = await _get_org_scoped_finding(db, org_id, finding_id)
     file_row = await db.get(File, finding.file_id)

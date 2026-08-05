@@ -2,17 +2,19 @@ import asyncio
 import json
 
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from codemind_api.db import SessionLocal, engine
 from codemind_api.main import create_app
 from codemind_api.routers.indexing import get_redis_pool
 from codemind_shared_types.models import (
+    EmailVerification,
     GithubInstallation,
     JobRun,
     Organization,
     OrganizationMember,
     Repository,
+    Subscription,
     User,
 )
 class _FakeArqJob:
@@ -109,6 +111,9 @@ async def test_sse_stream_transitions_from_queued_to_completed():
                     )
                 )
                 await session.execute(
+                    delete(Subscription).where(Subscription.organization_id == created_org_id)
+                )
+                await session.execute(
                     delete(OrganizationMember).where(
                         OrganizationMember.organization_id == created_org_id
                     )
@@ -116,5 +121,12 @@ async def test_sse_stream_transitions_from_queued_to_completed():
                 await session.execute(
                     delete(Organization).where(Organization.id == created_org_id)
                 )
+            await session.execute(
+                delete(EmailVerification).where(
+                    EmailVerification.user_id.in_(
+                        select(User.id).where(User.email == "sse@example.com")
+                    )
+                )
+            )
             await session.execute(delete(User).where(User.email == "sse@example.com"))
             await session.commit()

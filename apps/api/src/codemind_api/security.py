@@ -3,8 +3,20 @@ from uuid import UUID
 
 import bcrypt
 import jwt
+from fastapi import Response
 
 from codemind_api.config import settings
+
+
+def set_session_cookie(response: Response, user_id: UUID) -> None:
+    token = create_access_token(user_id)
+    response.set_cookie(
+        key=settings.session_cookie_name,
+        value=token,
+        httponly=True,
+        samesite="lax",
+        max_age=settings.jwt_expire_minutes * 60,
+    )
 
 
 def hash_password(password: str) -> str:

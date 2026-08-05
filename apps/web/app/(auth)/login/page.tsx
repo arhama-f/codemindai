@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
-import { apiClient } from "@/lib/apiClient";
+import { API_URL, apiClient } from "@/lib/apiClient";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,6 +58,23 @@ export default function LoginPage() {
           {isSubmitting ? "Signing in..." : "Sign in"}
         </button>
       </form>
+      <a href="/forgot-password" className="text-sm text-gray-500 hover:text-gray-300">
+        Forgot your password?
+      </a>
+      <div className="flex flex-col gap-2 border-t border-gray-800 pt-4">
+        <a
+          href={`${API_URL}/api/auth/oauth/google/start`}
+          className="rounded border border-gray-700 px-4 py-2 text-center hover:bg-gray-900"
+        >
+          Sign in with Google
+        </a>
+        <a
+          href={`${API_URL}/api/auth/oauth/github/start`}
+          className="rounded border border-gray-700 px-4 py-2 text-center hover:bg-gray-900"
+        >
+          Sign in with GitHub
+        </a>
+      </div>
     </main>
   );
 }

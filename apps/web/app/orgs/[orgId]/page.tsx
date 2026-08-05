@@ -71,7 +71,12 @@ export default function OrganizationDetailPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="text-2xl font-semibold">{orgQuery.data?.name ?? "Organization"}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">{orgQuery.data?.name ?? "Organization"}</h1>
+        <Link href={`/orgs/${orgId}/billing`} className="text-sm text-gray-500 hover:text-gray-300">
+          Billing &rarr;
+        </Link>
+      </div>
 
       <section className="mt-8">
         <h2 className="mb-2 text-lg font-medium">Repositories</h2>

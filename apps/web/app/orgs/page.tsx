@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 
 import { apiClient } from "@/lib/apiClient";
+import { VerificationBanner } from "@/components/VerificationBanner";
 
 export default function OrgsPage() {
   const { data, isLoading, isError } = useQuery({
@@ -29,6 +30,7 @@ export default function OrgsPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
+      <VerificationBanner />
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Organizations</h1>
         <Link

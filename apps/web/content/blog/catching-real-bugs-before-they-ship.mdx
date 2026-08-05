@@ -1,0 +1,29 @@
+---
+title: "Catching Real Bugs Before They Ship"
+date: "2026-08-03"
+description: "Why CodeMind AI's scanners are built on evidence-backed checks instead of a general-purpose 'ask the model to find bugs' prompt."
+---
+
+Ask a language model to "find bugs in this file" and it will confidently find
+some — whether or not they're real. That's fine for a brainstorming tool. It's
+not good enough for something meant to sit in your review pipeline.
+
+CodeMind AI's bug, security, and performance scanning is built the other way
+around: a fixed set of checks, each targeting a specific, well-understood
+failure mode (unguarded division, unsanitized input reaching a sink, an
+`await` missing inside a loop that should be batched, and more), each
+producing a finding with concrete evidence — the exact file, line range, and
+code snippet that triggered it. The AI's job in this pipeline is explaining
+*why* something is a problem and what to do about it, not deciding whether it
+exists in the first place.
+
+This shows up directly in the product: every finding links back to the
+source, every explanation can be regenerated without changing the underlying
+evidence, and every proposed fix is tied to the specific finding it addresses
+— never a floating claim with nothing to check it against.
+
+The same discipline carries into PR review. When CodeMind AI reviews a pull
+request, it only analyzes the lines that actually changed in that diff, and
+every inline comment is anchored to a real line in the PR. If nothing in the
+diff triggers a check, the review says so — it doesn't manufacture feedback to
+seem thorough.

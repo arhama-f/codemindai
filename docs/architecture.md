@@ -484,6 +484,54 @@ Three additions built together in one round:
   is still an open verification step — attempt it again once there's several
   GB of free disk headroom, via `docker compose --profile full up -d --build`.
 
+## Authentication: email verification, password reset, OAuth login
+
+Additive to the existing bcrypt+JWT-cookie flow, not a replacement:
+
+- **Email verification / password reset** — `packages/email_provider` (new,
+  same ABC+Mock+real shape as `ai_orchestrator`/`github_client`):
+  `MockEmailProvider` (default, records sends in-memory) and
+  `ResendEmailProvider` (real, used only once `RESEND_API_KEY` is set).
+  Single-use tokens are `secrets.token_urlsafe(32)`, SHA-256-hashed before
+  storage in new `email_verifications`/`password_resets` tables (raw token
+  only ever appears in the emailed link). Verification is a soft nudge, not a
+  gate — unverified users see a banner but aren't blocked from any action.
+- **OAuth login (Google + GitHub)** — `packages/oauth_client` (new, same
+  provider shape), a `user_oauth_identities` side-table (not columns on
+  `User` — mirrors `FindingExplanation`'s additive-table precedent),
+  `User.password_hash` made nullable for OAuth-only accounts. Stateless CSRF
+  via a short-lived `oauth_state` cookie compared against the callback's
+  `state` param, no server-side state table needed.
+- **Test-only email inspection** — `GET /api/testing/last-email`, mounted
+  only when `EXPOSE_TEST_ENDPOINTS=true` (set in `playwright.config.ts`'s API
+  webServer env only, never production), reads `MockEmailProvider.sent` so
+  Playwright can complete the verify/reset flows without a real inbox.
+
+## Stripe subscription billing
+
+Org-scoped, matching the existing `organization_id`-on-everything model:
+
+- New `subscriptions` table (1:1 with `organizations`, `plan`
+  free/pro/team, `status` mirroring Stripe's own subscription statuses).
+  Every new org gets a `plan="free"` row created inline at org-creation time
+  — no Stripe API call needed for the free tier.
+- **`apps/api/src/codemind_api/plan_limits.py`** — plain constants dict
+  (`{"free": {"repositories": 1, "ai_actions_per_month": 20}, ...}`), not a
+  DB table; `require_within_plan_limit(resource)` in `deps.py` composes
+  after `get_org_membership` and is applied only to mutating,
+  resource-consuming endpoints (repo add, indexing trigger, propose-fix,
+  explain-finding, PR review) — never to GETs.
+- **Checkout/portal without Stripe configured return `501`**, a deliberate
+  deviation from this project's mock-by-default pattern elsewhere — there's
+  no honest mock for a real-money checkout redirect, unlike AI text or an
+  email send.
+- Webhook handling (`POST /api/webhooks/stripe`, signature-verified via
+  `stripe.Webhook.construct_event`) syncs `checkout.session.completed`,
+  `customer.subscription.updated`, and `.deleted` back onto the
+  `Subscription` row. Tests monkeypatch the Stripe SDK calls directly rather
+  than a `MockStripeProvider` package — Stripe here is
+  transactional/webhook-driven, not a swappable content-generation seam.
+
 ## Deferred to later phases
 
 Documented explicitly so it's clear this is scope, not an oversight:
@@ -536,7 +584,7 @@ Documented explicitly so it's clear this is scope, not an oversight:
   editor.
 - Multi-branch/commit history, PR diffing — single synthetic branch+commit per demo
   repo.
-- Rate limiting, billing/usage, audit logging, notifications, granular RBAC.
+- Rate limiting, audit logging, notifications, granular RBAC.
 
 ## Known local-port remaps
 

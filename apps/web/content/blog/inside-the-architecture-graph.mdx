@@ -1,0 +1,30 @@
+---
+title: "Inside the Architecture Graph"
+date: "2026-08-03"
+description: "How CodeMind AI turns a pile of import statements into a navigable map of your system's subsystems."
+---
+
+A repository's `import` statements are a dependency graph in disguise. Every
+`import` line is an edge; every file is a node. The problem is that a raw
+file-level graph of a real codebase is unreadable — hundreds of nodes,
+thousands of edges, no sense of what actually groups together.
+
+CodeMind AI's architecture graph solves this in two steps. First, indexing
+parses every file with tree-sitter and resolves each import to either a
+known file in the repo or an external package, producing a precise
+`imports` relationship — not a guess based on file paths, but a real
+resolution step that understands relative specifiers, index files, and
+extension-less imports the way a bundler would.
+
+Second, an AI pass looks at the resulting file graph and identifies
+subsystems: cohesive groups of files that serve a common purpose (`auth`,
+`billing`, `data access`, and so on), each with a short summary of what it
+does. The graph you see in the UI is built from these subsystem nodes, not
+raw files — so a hundred-file repository becomes a dozen labeled boxes with
+real edges between them, and you can drill into any box to see the files
+underneath.
+
+This is deliberately not a fixed set of heuristics like "group by top-level
+directory." Directory structure often reflects history, not architecture.
+Subsystem identification looks at what actually imports what, which is a
+much more honest signal for "what is this part of the system for."

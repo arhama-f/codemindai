@@ -186,3 +186,9 @@ class ProposedFixDTO(BaseModel):
     updated_file_content: str
     test_file_path: str | None = None
     test_file_content: str | None = None
+
+
+class OAuthUserInfoDTO(BaseModel):
+    email: str
+    provider_user_id: str
+    full_name: str | None = None

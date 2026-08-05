@@ -31,7 +31,7 @@ export default defineConfig({
       cwd: "../api",
       url: `${API_URL}/healthz`,
       reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
+      timeout: 60_000,
       env: {
         // Force Mock providers regardless of what's in apps/api/.env — the
         // E2E suite must never call a real external API.
@@ -41,13 +41,14 @@ export default defineConfig({
         GITHUB_TARGET_REPO: "",
         DATABASE_URL: E2E_DATABASE_URL,
         REDIS_URL,
+        EXPOSE_TEST_ENDPOINTS: "true",
       },
     },
     {
       command: "npm run dev",
       url: WEB_URL,
       reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
+      timeout: 60_000,
       env: {
         NEXT_PUBLIC_API_URL: API_URL,
       },
@@ -62,7 +63,7 @@ export default defineConfig({
       stderr: "pipe",
       gracefulShutdown: { signal: "SIGTERM", timeout: 3_000 },
       reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
+      timeout: 60_000,
       env: {
         DATABASE_URL: E2E_DATABASE_URL,
         REDIS_URL,

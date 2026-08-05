@@ -8,11 +8,18 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from codemind_ai_orchestrator import MockAIProvider
+from codemind_email_provider import MockEmailProvider
 from codemind_github_client import MockGitHubWriteClient
+from codemind_oauth_client import MockOAuthProvider
 
 from codemind_api.db import SessionLocal, engine, get_db
 from codemind_api.main import create_app
-from codemind_api.providers import get_real_ai_provider, get_github_write_client
+from codemind_api.providers import (
+    get_email_provider,
+    get_github_write_client,
+    get_oauth_provider,
+    get_real_ai_provider,
+)
 from codemind_api.routers.indexing import get_redis_pool
 
 
@@ -63,9 +70,15 @@ async def client(db_session: AsyncSession):
     # staleness checks) override get_github_write_client again themselves.
     app.dependency_overrides[get_real_ai_provider] = lambda: MockAIProvider()
     app.dependency_overrides[get_github_write_client] = lambda: MockGitHubWriteClient()
+    # A single shared instance (not a fresh one per call) so tests can read
+    # `.sent` for tokens emailed across multiple requests in the same test.
+    email_provider = MockEmailProvider()
+    app.dependency_overrides[get_email_provider] = lambda: email_provider
+    app.dependency_overrides[get_oauth_provider] = lambda: MockOAuthProvider()
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        ac.email_provider = email_provider
         yield ac
 
 

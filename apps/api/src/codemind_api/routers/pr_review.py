@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from codemind_api.config import settings
 from codemind_api.db import get_db
-from codemind_api.deps import get_current_user, get_org_membership
+from codemind_api.deps import get_current_user, get_org_membership, require_within_plan_limit
 from codemind_api.providers import get_real_ai_provider, get_github_write_client
 
 router = APIRouter(prefix="/api/organizations/{org_id}/pr-reviews", tags=["pr-review"])
@@ -83,6 +83,7 @@ async def review_pull_request(
     write_client: GitHubWriteClient = Depends(get_github_write_client),
     ai_provider=Depends(get_real_ai_provider),
     _membership=Depends(get_org_membership),
+    _plan_limit=Depends(require_within_plan_limit("ai_actions_per_month")),
 ) -> PRReviewResponse:
     if not settings.github_target_owner or not settings.github_target_repo:
         raise HTTPException(

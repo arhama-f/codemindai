@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from codemind_api.db import SessionLocal, get_db
-from codemind_api.deps import get_org_membership
+from codemind_api.deps import get_org_membership, require_within_plan_limit
 from codemind_shared_types.models import JobRun, Repository
 
 router = APIRouter(prefix="/api/organizations/{org_id}", tags=["indexing"])
@@ -43,6 +43,7 @@ async def start_indexing(
     db: AsyncSession = Depends(get_db),
     redis_pool=Depends(get_redis_pool),
     _membership=Depends(get_org_membership),
+    _plan_limit=Depends(require_within_plan_limit("ai_actions_per_month")),
 ) -> StartIndexResponse:
     repository = await db.get(Repository, repo_id)
     if repository is None or repository.organization_id != org_id:

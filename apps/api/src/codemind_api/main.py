@@ -11,6 +11,10 @@ from codemind_api.routers import (
     architecture,
     ask,
     auth,
+    auth_oauth,
+    auth_password_reset,
+    auth_verification,
+    billing,
     files,
     finding_explanations,
     findings,
@@ -21,7 +25,9 @@ from codemind_api.routers import (
     pr_review,
     proposed_changes,
     repositories,
+    stripe_webhooks,
     summary,
+    testing,
 )
 
 
@@ -49,6 +55,9 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(auth.router)
+    app.include_router(auth_verification.router)
+    app.include_router(auth_password_reset.router)
+    app.include_router(auth_oauth.router)
     app.include_router(organizations.router)
     app.include_router(github.router)
     app.include_router(repositories.router)
@@ -62,6 +71,10 @@ def create_app() -> FastAPI:
     app.include_router(proposed_changes.router)
     app.include_router(finding_explanations.router)
     app.include_router(pr_review.router)
+    app.include_router(billing.router)
+    app.include_router(stripe_webhooks.router)
+    if settings.expose_test_endpoints:
+        app.include_router(testing.router)
 
     return app
 

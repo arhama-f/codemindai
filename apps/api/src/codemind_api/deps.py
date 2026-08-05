@@ -6,8 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from codemind_api.config import settings
 from codemind_api.db import get_db
+from codemind_api.plan_limits import PLAN_LIMITS, RESOURCE_COUNTERS
 from codemind_api.security import decode_access_token
-from codemind_shared_types.models import OrganizationMember, User
+from codemind_shared_types.models import OrganizationMember, Subscription, User
 
 
 async def get_current_user(
@@ -45,3 +46,28 @@ async def get_org_membership(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this organization"
         )
     return membership
+
+
+def require_within_plan_limit(resource: str):
+    """Dependency factory — composes after get_org_membership on mutating,
+    resource-consuming endpoints only (repo create, indexing trigger,
+    propose-fix, explain-finding, PR review). Never applied to GETs."""
+
+    async def _check(org_id: UUID, db: AsyncSession = Depends(get_db)) -> None:
+        result = await db.execute(
+            select(Subscription).where(Subscription.organization_id == org_id)
+        )
+        subscription = result.scalar_one_or_none()
+        plan = subscription.plan if subscription is not None else "free"
+        limit = PLAN_LIMITS[plan][resource]
+        if limit is None:
+            return
+
+        count = await RESOURCE_COUNTERS[resource](db, org_id)
+        if count >= limit:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"Plan limit reached for {resource} on the {plan} plan",
+            )
+
+    return _check

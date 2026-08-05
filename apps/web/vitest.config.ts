@@ -14,6 +14,11 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
     globals: true,
-    exclude: [...configDefaults.exclude, "e2e/**"],
+    // Excludes the `output: "standalone"` build's copy of the whole
+    // workspace (including this very tests/ dir) under .next/standalone —
+    // otherwise every test file runs twice after `next build` has been run
+    // once. Both the ".next" symlink and its ".next.nosync" real target
+    // (see docs/architecture.md's iCloud-sync notes) need excluding.
+    exclude: [...configDefaults.exclude, "e2e/**", ".next/**", ".next.nosync/**"],
   },
 });

@@ -32,8 +32,10 @@ class User(UUIDPKMixin, CreatedAtMixin, Base):
     __tablename__ = "users"
 
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    # Nullable — OAuth-only users (packages/oauth_client) never set a password.
+    password_hash: Mapped[str | None] = mapped_column(String, nullable=True)
     full_name: Mapped[str] = mapped_column(String, nullable=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     updated_at: Mapped[datetime] = mapped_column(
         server_default=text("now()"), onupdate=text("now()")
     )
@@ -387,6 +389,41 @@ class FindingExplanation(UUIDPKMixin, CreatedAtMixin, Base):
     )
 
 
+class EmailVerification(UUIDPKMixin, CreatedAtMixin, Base):
+    __tablename__ = "email_verifications"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+
+class PasswordReset(UUIDPKMixin, CreatedAtMixin, Base):
+    __tablename__ = "password_resets"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+
+class UserOAuthIdentity(UUIDPKMixin, CreatedAtMixin, Base):
+    __tablename__ = "user_oauth_identities"
+    __table_args__ = (UniqueConstraint("provider", "provider_user_id"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    provider: Mapped[str] = mapped_column(
+        String, CheckConstraint("provider in ('google','github')"), nullable=False
+    )
+    provider_user_id: Mapped[str] = mapped_column(String, nullable=False)
+
+
 class PRReview(UUIDPKMixin, CreatedAtMixin, Base):
     __tablename__ = "pr_reviews"
 
@@ -405,4 +442,27 @@ class PRReview(UUIDPKMixin, CreatedAtMixin, Base):
     review_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+
+
+class Subscription(UUIDPKMixin, CreatedAtMixin, Base):
+    __tablename__ = "subscriptions"
+    __table_args__ = (UniqueConstraint("organization_id"),)
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
+    )
+    plan: Mapped[str] = mapped_column(
+        String, CheckConstraint("plan in ('free','pro','team')"), server_default="free"
+    )
+    status: Mapped[str] = mapped_column(
+        String,
+        CheckConstraint("status in ('active','past_due','canceled','trialing')"),
+        server_default="active",
+    )
+    stripe_customer_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
+    current_period_end: Mapped[datetime | None] = mapped_column(nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        server_default=text("now()"), onupdate=text("now()")
     )

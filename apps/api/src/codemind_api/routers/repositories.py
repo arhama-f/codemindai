@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from codemind_api.db import get_db
-from codemind_api.deps import get_org_membership
+from codemind_api.deps import get_org_membership, require_within_plan_limit
 from codemind_api.providers import get_github_client
 from codemind_api.repository_index_utils import get_latest_analysis_run
 from codemind_github_client import GitHubClient
@@ -60,6 +60,7 @@ async def add_repository(
     db: AsyncSession = Depends(get_db),
     github_client: GitHubClient = Depends(get_github_client),
     _membership=Depends(get_org_membership),
+    _plan_limit=Depends(require_within_plan_limit("repositories")),
 ) -> RepositoryResponse:
     installation_result = await db.execute(
         select(GithubInstallation).where(GithubInstallation.organization_id == org_id)

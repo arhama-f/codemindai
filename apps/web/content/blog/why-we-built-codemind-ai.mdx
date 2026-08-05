@@ -1,0 +1,29 @@
+---
+title: "Why We Built CodeMind AI"
+date: "2026-08-03"
+description: "Understanding an unfamiliar codebase shouldn't take a week. Here's why we're building an AI staff engineer that actually reads your repo."
+---
+
+Every engineer who has joined a new team knows the feeling: a repository with
+years of history, half-documented conventions, and a dozen implicit
+assumptions baked into the code. Onboarding docs go stale. Comments lie.
+The only source of truth is the code itself — and reading all of it doesn't
+scale.
+
+CodeMind AI exists to close that gap. Instead of a chatbot that's read *about*
+your code, it's a system that actually indexes your repository: parsing every
+file with tree-sitter, extracting symbols and import relationships, chunking
+content for retrieval, and building a real dependency graph. When you ask a
+question, the answer comes with citations — exact file paths and line ranges
+— because "trust me" isn't good enough when you're about to ship a fix.
+
+We started narrow on purpose. The first version does one thing well: index a
+repository and answer questions about it with real citations, backed by a
+tree-sitter-derived symbol graph rather than a vector-only guess. Everything
+since — the architecture graph, bug and security scanning, PR review, fix
+proposals — has built on that same foundation of "don't claim something the
+system can't actually verify against the code."
+
+That's still the principle behind every feature we ship: if CodeMind AI tells
+you something about your codebase, it should be able to point at exactly
+where that came from.

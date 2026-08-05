@@ -5,10 +5,13 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from codemind_api.auth_tokens import create_verification_token
 from codemind_api.config import settings
 from codemind_api.db import get_db
 from codemind_api.deps import get_current_user
-from codemind_api.security import create_access_token, hash_password, verify_password
+from codemind_api.providers import get_email_provider
+from codemind_api.security import hash_password, set_session_cookie, verify_password
+from codemind_email_provider import EmailProvider
 from codemind_shared_types.models import User
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -29,22 +32,15 @@ class UserResponse(BaseModel):
     id: UUID
     email: str
     full_name: str
-
-
-def _set_session_cookie(response: Response, user_id: UUID) -> None:
-    token = create_access_token(user_id)
-    response.set_cookie(
-        key=settings.session_cookie_name,
-        value=token,
-        httponly=True,
-        samesite="lax",
-        max_age=settings.jwt_expire_minutes * 60,
-    )
+    is_verified: bool
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(
-    payload: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)
+    payload: RegisterRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    email_provider: EmailProvider = Depends(get_email_provider),
 ) -> User:
     existing = await db.execute(select(User).where(User.email == payload.email))
     if existing.scalar_one_or_none() is not None:
@@ -56,10 +52,20 @@ async def register(
         full_name=payload.full_name,
     )
     db.add(user)
+    await db.flush()
+
+    verification = await create_verification_token(db, user_id=user.id)
     await db.commit()
     await db.refresh(user)
 
-    _set_session_cookie(response, user.id)
+    verify_link = f"{settings.web_origin}/verify-email/{verification.raw_token}"
+    await email_provider.send(
+        to=user.email,
+        subject="Verify your CodeMind AI email",
+        html_body=f'<p>Welcome to CodeMind AI. <a href="{verify_link}">Verify your email</a>.</p>',
+    )
+
+    set_session_cookie(response, user.id)
     return user
 
 
@@ -69,10 +75,12 @@ async def login(
 ) -> User:
     result = await db.execute(select(User).where(User.email == payload.email))
     user = result.scalar_one_or_none()
-    if user is None or not verify_password(payload.password, user.password_hash):
+    if user is None or user.password_hash is None or not verify_password(
+        payload.password, user.password_hash
+    ):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    _set_session_cookie(response, user.id)
+    set_session_cookie(response, user.id)
     return user
 
 
