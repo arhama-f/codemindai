@@ -26,6 +26,8 @@ COPY packages/code_parser packages/code_parser
 COPY packages/ai_orchestrator packages/ai_orchestrator
 COPY packages/embedding_provider packages/embedding_provider
 COPY packages/analysis_engine packages/analysis_engine
+COPY packages/email_provider packages/email_provider
+COPY packages/oauth_client packages/oauth_client
 COPY apps/api apps/api
 COPY fixtures fixtures
 
@@ -35,7 +37,9 @@ RUN pip install --no-cache-dir \
     -e packages/code_parser \
     -e packages/ai_orchestrator \
     -e packages/embedding_provider \
-    -e packages/analysis_engine
+    -e packages/analysis_engine \
+    -e packages/email_provider \
+    -e packages/oauth_client
 # cd first: pip resolves a requirements file's relative `-e ../../packages/...`
 # entries against the working directory, not the file's own location.
 RUN cd apps/api && pip install --no-cache-dir -r requirements.txt -e .
