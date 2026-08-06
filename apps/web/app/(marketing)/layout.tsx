@@ -9,6 +9,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             CodeMind AI
           </Link>
           <div className="flex items-center gap-6 text-sm">
+            <Link href="/pricing" className="text-gray-400 hover:text-gray-200">
+              Pricing
+            </Link>
             <Link href="/blog" className="text-gray-400 hover:text-gray-200">
               Blog
             </Link>
