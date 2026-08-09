@@ -2,6 +2,11 @@
 
 import { FormEvent, useState } from "react";
 
+import { AuthShell } from "@/components/marketing/auth-shell";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/apiClient";
 
 export default function ForgotPasswordPage() {
@@ -21,35 +26,45 @@ export default function ForgotPasswordPage() {
 
   if (submitted) {
     return (
-      <main className="mx-auto flex max-w-sm flex-col gap-4 px-6 py-24 text-center">
-        <h1 className="text-2xl font-semibold">Check your email</h1>
-        <p className="text-gray-400">
-          If an account exists for {email}, we&apos;ve sent a password reset link.
-        </p>
-      </main>
+      <AuthShell>
+        <Card className="border-border/60 p-6 text-center shadow-sm md:p-8">
+          <CardHeader className="px-0">
+            <CardTitle className="text-xl">Check your email</CardTitle>
+            <CardDescription>
+              If an account exists for {email}, we&apos;ve sent a password reset link.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </AuthShell>
     );
   }
 
   return (
-    <main className="mx-auto flex max-w-sm flex-col gap-4 px-6 py-24">
-      <h1 className="text-2xl font-semibold">Forgot your password?</h1>
-      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
-        <input
-          className="rounded border border-gray-700 bg-gray-900 px-3 py-2"
-          placeholder="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
-        >
-          {isSubmitting ? "Sending..." : "Send reset link"}
-        </button>
-      </form>
-    </main>
+    <AuthShell>
+      <Card className="border-border/60 p-6 shadow-sm md:p-8">
+        <CardHeader className="px-0 pb-6">
+          <CardTitle className="text-xl">Forgot your password?</CardTitle>
+          <CardDescription>We&apos;ll email you a link to reset it.</CardDescription>
+        </CardHeader>
+        <CardContent className="px-0">
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                className="h-10"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" disabled={isSubmitting} className="mt-1 h-10">
+              {isSubmitting ? "Sending..." : "Send reset link"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </AuthShell>
   );
 }

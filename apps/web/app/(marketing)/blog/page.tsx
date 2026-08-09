@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Card } from "@/components/ui/card";
 import { getAllBlogPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
@@ -12,19 +13,24 @@ export default function BlogIndexPage() {
   const posts = getAllBlogPosts();
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="mb-8 text-2xl font-semibold">Blog</h1>
-      <ul className="flex flex-col gap-6">
+    <main className="mx-auto max-w-3xl px-6 py-24 md:py-32">
+      <div className="mb-16 text-center">
+        <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Blog</h1>
+        <p className="mt-4 text-lg text-muted-foreground">
+          Notes on building an AI staff engineer that reads your actual code.
+        </p>
+      </div>
+      <div className="flex flex-col gap-4">
         {posts.map((post) => (
-          <li key={post.slug}>
-            <Link href={`/blog/${post.slug}`} className="block">
-              <h2 className="text-lg font-medium hover:text-blue-400">{post.title}</h2>
-              <p className="mt-1 text-sm text-gray-500">{post.date}</p>
-              <p className="mt-2 text-gray-400">{post.description}</p>
-            </Link>
-          </li>
+          <Link key={post.slug} href={`/blog/${post.slug}`}>
+            <Card className="border-border/60 p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg md:p-8">
+              <p className="mb-2 text-sm text-muted-foreground">{post.date}</p>
+              <h2 className="mb-2 text-xl font-semibold">{post.title}</h2>
+              <p className="text-muted-foreground">{post.description}</p>
+            </Card>
+          </Link>
         ))}
-      </ul>
+      </div>
     </main>
   );
 }

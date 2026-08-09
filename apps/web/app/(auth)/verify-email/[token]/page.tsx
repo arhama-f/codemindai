@@ -4,6 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
+import { AuthShell } from "@/components/marketing/auth-shell";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/apiClient";
 
 export default function VerifyEmailPage() {
@@ -22,25 +25,36 @@ export default function VerifyEmailPage() {
   });
 
   return (
-    <main className="mx-auto flex max-w-sm flex-col gap-4 px-6 py-24 text-center">
-      {verifyQuery.isLoading && <p className="text-gray-400">Verifying your email...</p>}
-      {verifyQuery.isSuccess && (
-        <>
-          <h1 className="text-2xl font-semibold">Email verified</h1>
-          <p className="text-gray-400">Your email address has been verified.</p>
-        </>
-      )}
-      {verifyQuery.isError && (
-        <>
-          <h1 className="text-2xl font-semibold">Verification failed</h1>
-          <p className="text-gray-400">
-            This verification link is invalid or has expired.
-          </p>
-        </>
-      )}
-      <Link href="/orgs" className="text-blue-400 hover:text-blue-300">
-        Go to your organizations
-      </Link>
-    </main>
+    <AuthShell>
+      <Card className="border-border/60 p-6 text-center shadow-sm md:p-8">
+        <CardHeader className="items-center px-0">
+          {verifyQuery.isLoading && (
+            <CardDescription>Verifying your email...</CardDescription>
+          )}
+          {verifyQuery.isSuccess && (
+            <>
+              <CardTitle className="text-xl">Email verified</CardTitle>
+              <CardDescription>Your email address has been verified.</CardDescription>
+            </>
+          )}
+          {verifyQuery.isError && (
+            <>
+              <CardTitle className="text-xl">Verification failed</CardTitle>
+              <CardDescription>This verification link is invalid or has expired.</CardDescription>
+            </>
+          )}
+        </CardHeader>
+        <CardContent className="px-0 pt-4">
+          <Button
+            variant="outline"
+            className="h-10 w-full"
+            nativeButton={false}
+            render={<Link href="/orgs" />}
+          >
+            Go to your organizations
+          </Button>
+        </CardContent>
+      </Card>
+    </AuthShell>
   );
 }

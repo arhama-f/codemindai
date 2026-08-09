@@ -3,6 +3,12 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
+import { AuthShell } from "@/components/marketing/auth-shell";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { API_URL, apiClient } from "@/lib/apiClient";
 
 export default function RegisterPage() {
@@ -31,55 +37,84 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-sm flex-col gap-4 px-6 py-24">
-      <h1 className="text-2xl font-semibold">Create your account</h1>
-      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
-        <input
-          className="rounded border border-gray-700 bg-gray-900 px-3 py-2"
-          placeholder="Full name"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          required
-        />
-        <input
-          className="rounded border border-gray-700 bg-gray-900 px-3 py-2"
-          placeholder="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          className="rounded border border-gray-700 bg-gray-900 px-3 py-2"
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
-        >
-          {isSubmitting ? "Creating account..." : "Create account"}
-        </button>
-      </form>
-      <div className="flex flex-col gap-2 border-t border-gray-800 pt-4">
-        <a
-          href={`${API_URL}/api/auth/oauth/google/start`}
-          className="rounded border border-gray-700 px-4 py-2 text-center hover:bg-gray-900"
-        >
-          Sign up with Google
-        </a>
-        <a
-          href={`${API_URL}/api/auth/oauth/github/start`}
-          className="rounded border border-gray-700 px-4 py-2 text-center hover:bg-gray-900"
-        >
-          Sign up with GitHub
-        </a>
-      </div>
-    </main>
+    <AuthShell>
+      <Card className="border-border/60 p-6 shadow-sm md:p-8">
+        <CardHeader className="px-0 pb-6">
+          <CardTitle className="text-xl">Create your account</CardTitle>
+          <CardDescription>Start indexing your first repository for free.</CardDescription>
+        </CardHeader>
+        <CardContent className="px-0">
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="fullName">Full name</Label>
+              <Input
+                id="fullName"
+                className="h-10"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                className="h-10"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                className="h-10"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" disabled={isSubmitting} className="mt-1 h-10">
+              {isSubmitting ? "Creating account..." : "Create account"}
+            </Button>
+          </form>
+
+          <div className="my-6 flex items-center gap-3">
+            <Separator className="flex-1" />
+            <span className="text-xs text-muted-foreground">or continue with</span>
+            <Separator className="flex-1" />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              className="h-10"
+              nativeButton={false}
+              render={<a href={`${API_URL}/api/auth/oauth/google/start`} />}
+            >
+              Sign up with Google
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10"
+              nativeButton={false}
+              render={<a href={`${API_URL}/api/auth/oauth/github/start`} />}
+            >
+              Sign up with GitHub
+            </Button>
+          </div>
+        </CardContent>
+        <CardFooter className="justify-center bg-transparent px-0 pt-6 text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <a href="/login" className="ml-1 text-primary hover:underline">
+            Sign in
+          </a>
+        </CardFooter>
+      </Card>
+    </AuthShell>
   );
 }
