@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -40,7 +41,7 @@ function TreeEntry({
       <li>
         <Link
           href={`/orgs/${orgId}/repos/${repoId}/files/${entry.file!.id}`}
-          className="block py-0.5 font-mono text-sm text-gray-400 hover:text-blue-400"
+          className="block py-0.5 font-mono text-sm text-muted-foreground transition-colors hover:text-primary"
         >
           {entry.name}
         </Link>
@@ -52,9 +53,13 @@ function TreeEntry({
     <li>
       <button
         onClick={() => setCollapsed((v) => !v)}
-        className="flex items-center gap-1 py-0.5 text-sm text-gray-300 hover:text-white"
+        className="flex items-center gap-1 py-0.5 text-sm text-foreground/90 transition-colors hover:text-foreground"
       >
-        <span>{collapsed ? "▸" : "▾"}</span>
+        {collapsed ? (
+          <ChevronRight className="size-3.5 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="size-3.5 text-muted-foreground" />
+        )}
         <span>{entry.name}/</span>
       </button>
       {!collapsed && <DirectoryListing node={entry} orgId={orgId} repoId={repoId} />}

@@ -41,7 +41,7 @@ export function SymbolOutline({
   const [loadingSymbolId, setLoadingSymbolId] = useState<string | null>(null);
 
   if (symbols.length === 0) {
-    return <p className="text-sm text-gray-500">No symbols in this file.</p>;
+    return <p className="text-sm text-muted-foreground">No symbols in this file.</p>;
   }
 
   async function handleViewImpact(symbolId: string) {
@@ -74,35 +74,37 @@ export function SymbolOutline({
                 onClick={() =>
                   router.push(`${pathname}?start=${symbol.start_line}&end=${symbol.end_line}`)
                 }
-                className="flex-1 rounded px-2 py-1 text-left text-sm hover:bg-gray-800"
+                className="flex-1 rounded-md px-2 py-1 text-left text-sm transition-colors hover:bg-muted"
               >
-                <span className="font-mono text-blue-400">{symbol.name}</span>{" "}
-                <span className="text-gray-500">({symbol.kind})</span>
+                <span className="font-mono text-primary">{symbol.name}</span>{" "}
+                <span className="text-muted-foreground">({symbol.kind})</span>
               </button>
               <button
                 onClick={() => handleViewImpact(symbol.id)}
-                className="rounded px-1.5 py-1 text-xs text-gray-500 hover:bg-gray-800 hover:text-gray-300"
+                className="rounded-md px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 title="What breaks if I change this?"
               >
                 impact
               </button>
             </div>
             {expandedSymbolId === symbol.id && (
-              <div className="ml-2 mt-1 rounded border border-gray-800 p-2 text-xs">
-                {loadingSymbolId === symbol.id && <p className="text-gray-500">Loading...</p>}
+              <div className="mt-1 ml-2 rounded-lg border border-border bg-muted/30 p-2 text-xs">
+                {loadingSymbolId === symbol.id && (
+                  <p className="text-muted-foreground">Loading...</p>
+                )}
                 {impact && (
                   <>
-                    <p className="mb-1 text-gray-500">
+                    <p className="mb-1 text-muted-foreground">
                       Direct dependents ({impact.direct_dependent_files.length})
                     </p>
                     {impact.direct_dependent_files.length === 0 && (
-                      <p className="text-gray-600">None found.</p>
+                      <p className="text-muted-foreground/70">None found.</p>
                     )}
                     <ul className="flex flex-col gap-0.5">
                       {impact.direct_dependent_files.map((file) => (
-                        <li key={file.file_id} className="font-mono text-gray-400">
+                        <li key={file.file_id} className="font-mono text-muted-foreground">
                           {file.file_path}{" "}
-                          <span className="text-gray-600">({file.confidence})</span>
+                          <span className="text-muted-foreground/70">({file.confidence})</span>
                         </li>
                       ))}
                     </ul>

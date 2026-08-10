@@ -4,9 +4,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-import { apiClient } from "@/lib/apiClient";
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
 import { FindingsList } from "@/components/FindingsList";
 import { JobProgressBar } from "@/components/JobProgressBar";
+import { Button } from "@/components/ui/button";
+import { apiClient } from "@/lib/apiClient";
 
 export default function FindingsPage() {
   const { orgId, repoId } = useParams<{ orgId: string; repoId: string }>();
@@ -43,16 +45,20 @@ export default function FindingsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
+    <main className="mx-auto max-w-3xl px-6 py-12">
+      <Breadcrumbs
+        items={[
+          { label: "Organization", href: `/orgs/${orgId}` },
+          { label: "Repository", href: `/orgs/${orgId}/repos/${repoId}` },
+          { label: "Findings" },
+        ]}
+      />
+
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Findings</h1>
-        <button
-          onClick={handleRunAnalysis}
-          disabled={isStarting}
-          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
-        >
+        <h1 className="text-2xl font-semibold tracking-tight">Findings</h1>
+        <Button onClick={handleRunAnalysis} disabled={isStarting}>
           {isStarting ? "Starting..." : "Run analysis"}
-        </button>
+        </Button>
       </div>
 
       {jobId && (

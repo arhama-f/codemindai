@@ -3,8 +3,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 
-import { apiClient } from "@/lib/apiClient";
 import { AskForm } from "@/components/AskForm";
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
+import { apiClient } from "@/lib/apiClient";
 
 export default function AskPage() {
   const { orgId, repoId } = useParams<{ orgId: string; repoId: string }>();
@@ -26,8 +27,15 @@ export default function AskPage() {
   );
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="mb-6 text-2xl font-semibold">Ask this repository</h1>
+    <main className="mx-auto max-w-2xl px-6 py-12">
+      <Breadcrumbs
+        items={[
+          { label: "Organization", href: `/orgs/${orgId}` },
+          { label: "Repository", href: `/orgs/${orgId}/repos/${repoId}` },
+          { label: "Ask" },
+        ]}
+      />
+      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Ask this repository</h1>
       <AskForm orgId={orgId} repoId={repoId} filePathToId={filePathToId} />
     </main>
   );

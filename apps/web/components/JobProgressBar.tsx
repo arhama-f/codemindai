@@ -43,18 +43,18 @@ export function JobProgressBar({
   }, [orgId, jobId]);
 
   if (!job) {
-    return <p className="text-sm text-gray-500">Connecting...</p>;
+    return <p className="text-sm text-muted-foreground">Connecting...</p>;
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="h-2 w-full overflow-hidden rounded bg-gray-800">
+    <div className="flex flex-col gap-1.5">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full bg-blue-600 transition-all"
+          className="h-full rounded-full bg-primary transition-all duration-300"
           style={{ width: `${job.progress_percent}%` }}
         />
       </div>
-      <p className="text-sm text-gray-400">
+      <p className="text-sm text-muted-foreground">
         {job.status}
         {job.message ? ` — ${job.message}` : ""} ({job.progress_percent}%)
       </p>

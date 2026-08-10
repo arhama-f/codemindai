@@ -1,15 +1,17 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
-import { apiClient } from "@/lib/apiClient";
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
 import { DismissFindingForm } from "@/components/DismissFindingForm";
 import { FindingExplanationPanel } from "@/components/FindingExplanationPanel";
 import { ProposedFixPanel } from "@/components/ProposedFixPanel";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { SourceViewer } from "@/components/SourceViewer";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiClient } from "@/lib/apiClient";
 
 export default function FindingDetailPage() {
   const { orgId, repoId, findingId } = useParams<{
@@ -49,59 +51,69 @@ export default function FindingDetailPage() {
     enabled: Boolean(findingQuery.data),
   });
 
-  if (findingQuery.isLoading) return <main className="p-6 text-gray-400">Loading...</main>;
+  if (findingQuery.isLoading) return <main className="p-6 text-muted-foreground">Loading...</main>;
   const finding = findingQuery.data;
   if (!finding) return null;
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
-      <Link
-        href={`/orgs/${orgId}/repos/${repoId}/findings`}
-        className="mb-4 inline-block text-sm text-gray-500 hover:text-gray-300"
-      >
-        &larr; Back to findings
-      </Link>
+    <main className="mx-auto max-w-4xl px-6 py-12">
+      <Breadcrumbs
+        items={[
+          { label: "Organization", href: `/orgs/${orgId}` },
+          { label: "Repository", href: `/orgs/${orgId}/repos/${repoId}` },
+          { label: "Findings", href: `/orgs/${orgId}/repos/${repoId}/findings` },
+          { label: finding.title },
+        ]}
+      />
 
       <div className="mb-4 flex items-center gap-3">
         <SeverityBadge severity={finding.severity} />
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-muted-foreground">
           {finding.category} &middot; confidence: {finding.confidence}
         </span>
-        {finding.status === "dismissed" && (
-          <span className="rounded border border-gray-700 px-2 py-0.5 text-xs text-gray-400">
-            dismissed
-          </span>
-        )}
+        {finding.status === "dismissed" && <Badge variant="outline">dismissed</Badge>}
       </div>
 
-      <h1 className="mb-4 text-2xl font-semibold">{finding.title}</h1>
+      <h1 className="mb-4 text-2xl font-semibold tracking-tight">{finding.title}</h1>
 
-      <p className="mb-4 text-gray-300">{finding.explanation}</p>
+      <p className="mb-6 text-sm text-foreground/90">{finding.explanation}</p>
 
       <FindingExplanationPanel orgId={orgId} repoId={repoId} findingId={findingId} />
 
-      <div className="mb-4 rounded border border-gray-800 p-4">
-        <h2 className="mb-1 text-sm font-medium text-gray-500">Recommended fix</h2>
-        <p className="text-gray-300">{finding.recommended_fix}</p>
-      </div>
+      <Card className="mb-4 gap-1 p-4 shadow-none">
+        <CardHeader className="p-0">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Recommended fix</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <p className="text-sm text-foreground/90">{finding.recommended_fix}</p>
+        </CardContent>
+      </Card>
 
       {finding.suggested_test && (
-        <div className="mb-4 rounded border border-gray-800 p-4">
-          <h2 className="mb-1 text-sm font-medium text-gray-500">Suggested test</h2>
-          <p className="text-gray-300">{finding.suggested_test}</p>
-        </div>
+        <Card className="mb-4 gap-1 p-4 shadow-none">
+          <CardHeader className="p-0">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Suggested test</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <p className="text-sm text-foreground/90">{finding.suggested_test}</p>
+          </CardContent>
+        </Card>
       )}
 
       {finding.execution_path && (
-        <div className="mb-4 rounded border border-gray-800 p-4">
-          <h2 className="mb-1 text-sm font-medium text-gray-500">Execution path</h2>
-          <p className="text-gray-300">{finding.execution_path}</p>
-        </div>
+        <Card className="mb-4 gap-1 p-4 shadow-none">
+          <CardHeader className="p-0">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Execution path</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <p className="text-sm text-foreground/90">{finding.execution_path}</p>
+          </CardContent>
+        </Card>
       )}
 
       {fileQuery.data && (
         <div className="mb-6">
-          <h2 className="mb-2 text-sm font-medium text-gray-500">
+          <h2 className="mb-2 text-sm font-medium text-muted-foreground">
             {finding.file_path}:{finding.start_line}-{finding.end_line}
           </h2>
           <SourceViewer

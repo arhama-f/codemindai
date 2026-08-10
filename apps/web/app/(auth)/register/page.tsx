@@ -77,7 +77,11 @@ export default function RegisterPage() {
                 required
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            )}
             <Button type="submit" disabled={isSubmitting} className="mt-1 h-10">
               {isSubmitting ? "Creating account..." : "Create account"}
             </Button>

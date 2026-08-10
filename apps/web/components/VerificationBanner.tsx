@@ -1,8 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
+import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/apiClient";
 
 export function VerificationBanner() {
@@ -24,15 +25,11 @@ export function VerificationBanner() {
   }
 
   return (
-    <div className="mb-6 flex items-center justify-between rounded border border-yellow-800 bg-yellow-950/40 px-4 py-3 text-sm text-yellow-300">
+    <div className="mb-6 flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
       <span>Please verify your email address.</span>
-      <button
-        onClick={resendVerification}
-        disabled={resent}
-        className="rounded border border-yellow-700 px-3 py-1 hover:bg-yellow-900 disabled:opacity-50"
-      >
+      <Button size="sm" variant="outline" onClick={resendVerification} disabled={resent}>
         {resent ? "Verification email sent" : "Resend verification email"}
-      </button>
+      </Button>
     </div>
   );
 }

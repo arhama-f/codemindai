@@ -7,6 +7,10 @@ import { getAllBlogPosts } from "@/lib/blog";
 export const metadata: Metadata = {
   title: "Blog — CodeMind AI",
   description: "Notes on building an AI staff engineer that reads your actual code.",
+  openGraph: {
+    title: "Blog — CodeMind AI",
+    description: "Notes on building an AI staff engineer that reads your actual code.",
+  },
 };
 
 export default function BlogIndexPage() {

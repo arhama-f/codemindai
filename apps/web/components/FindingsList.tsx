@@ -3,8 +3,16 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { filterFindings, type FindingSummary } from "@/lib/findings";
 import { SeverityBadge } from "@/components/SeverityBadge";
+import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { filterFindings, type FindingSummary } from "@/lib/findings";
 
 const CATEGORIES = ["bug", "security", "performance"];
 const SEVERITIES = ["critical", "high", "medium", "low"];
@@ -30,61 +38,63 @@ export function FindingsList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-3">
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
-        >
-          <option value="">All categories</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <select
-          value={severity}
-          onChange={(e) => setSeverity(e.target.value)}
-          className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
-        >
-          <option value="">All severities</option>
-          {SEVERITIES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
-        >
-          <option value="open">Open</option>
-          <option value="dismissed">Dismissed</option>
-          <option value="">All</option>
-        </select>
+      <div className="flex flex-wrap gap-2">
+        <Select value={category || "all"} onValueChange={(v) => setCategory(v && v !== "all" ? v : "")}>
+          <SelectTrigger size="sm">
+            <SelectValue placeholder="All categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All categories</SelectItem>
+            {CATEGORIES.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={severity || "all"} onValueChange={(v) => setSeverity(v && v !== "all" ? v : "")}>
+          <SelectTrigger size="sm">
+            <SelectValue placeholder="All severities" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All severities</SelectItem>
+            {SEVERITIES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={status || "all"} onValueChange={(v) => setStatus(v && v !== "all" ? v : "")}>
+          <SelectTrigger size="sm">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="dismissed">Dismissed</SelectItem>
+            <SelectItem value="all">All</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {filtered.length === 0 && <p className="text-gray-500">No findings match these filters.</p>}
+      {filtered.length === 0 && (
+        <p className="text-sm text-muted-foreground">No findings match these filters.</p>
+      )}
 
-      <ul className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
         {filtered.map((finding) => (
-          <li key={finding.id}>
-            <Link
-              href={`/orgs/${orgId}/repos/${repoId}/findings/${finding.id}`}
-              className="flex items-center gap-3 rounded border border-gray-800 px-4 py-3 hover:bg-gray-900"
-            >
+          <Link key={finding.id} href={`/orgs/${orgId}/repos/${repoId}/findings/${finding.id}`}>
+            <Card className="flex-row items-center gap-3 p-4 shadow-none transition-colors hover:bg-muted/40">
               <SeverityBadge severity={finding.severity} />
-              <span className="text-xs text-gray-500">{finding.category}</span>
-              <span className="flex-1">{finding.title}</span>
-              <span className="font-mono text-xs text-gray-600">
+              <span className="text-xs text-muted-foreground">{finding.category}</span>
+              <span className="flex-1 truncate text-sm font-medium">{finding.title}</span>
+              <span className="hidden shrink-0 font-mono text-xs text-muted-foreground sm:inline">
                 {finding.file_path}:{finding.start_line}
               </span>
-            </Link>
-          </li>
+            </Card>
+          </Link>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-import { apiClient } from "@/lib/apiClient";
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
 import { PRReviewPanel } from "@/components/PRReviewPanel";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { apiClient } from "@/lib/apiClient";
 
 export default function OrganizationDetailPage() {
   const { orgId } = useParams<{ orgId: string }>();
@@ -70,74 +73,70 @@ export default function OrganizationDetailPage() {
   const addedExternalIds = new Set(reposQuery.data?.map((r) => r.full_name));
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
+    <main className="mx-auto max-w-3xl px-6 py-12">
+      <Breadcrumbs items={[{ label: orgQuery.data?.name ?? "Organization" }]} />
+
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{orgQuery.data?.name ?? "Organization"}</h1>
-        <Link href={`/orgs/${orgId}/billing`} className="text-sm text-gray-500 hover:text-gray-300">
-          Billing &rarr;
-        </Link>
+        <h1 className="text-2xl font-semibold tracking-tight">{orgQuery.data?.name ?? "Organization"}</h1>
+        <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/orgs/${orgId}/billing`} />}>
+          Billing
+        </Button>
       </div>
 
       <section className="mt-8">
-        <h2 className="mb-2 text-lg font-medium">Repositories</h2>
-        <ul className="flex flex-col gap-2">
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">Repositories</h2>
+        <div className="flex flex-col gap-2">
           {reposQuery.data?.map((repo) => (
-            <li key={repo.id}>
-              <Link
-                href={`/orgs/${orgId}/repos/${repo.id}`}
-                className="block rounded border border-gray-800 px-4 py-3 hover:bg-gray-900"
-              >
-                <span className="font-medium">{repo.full_name}</span>{" "}
-                <span className="text-sm text-gray-500">
-                  ({repo.latest_index_status ?? "not indexed"})
+            <Link key={repo.id} href={`/orgs/${orgId}/repos/${repo.id}`}>
+              <Card className="flex-row items-center justify-between p-4 shadow-none transition-colors hover:bg-muted/40">
+                <span className="font-medium">{repo.full_name}</span>
+                <span className="text-sm text-muted-foreground">
+                  {repo.latest_index_status ?? "not indexed"}
                 </span>
-              </Link>
-            </li>
+              </Card>
+            </Link>
           ))}
           {reposQuery.data?.length === 0 && (
-            <p className="text-gray-500">No repositories added yet.</p>
+            <p className="text-sm text-muted-foreground">No repositories added yet.</p>
           )}
-        </ul>
+        </div>
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-2 text-lg font-medium">Connect GitHub</h2>
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">Connect GitHub</h2>
         {availableReposQuery.data?.length ? (
-          <ul className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             {availableReposQuery.data
               .filter((repo) => !addedExternalIds.has(repo.full_name))
               .map((repo) => (
-                <li
+                <Card
                   key={repo.external_repo_id}
-                  className="flex items-center justify-between rounded border border-gray-800 px-4 py-3"
+                  className="flex-row items-center justify-between p-4 shadow-none"
                 >
-                  <span>{repo.full_name}</span>
-                  <button
+                  <span className="text-sm">{repo.full_name}</span>
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={() => handleAddRepository(repo.external_repo_id)}
                     disabled={addingRepoId === repo.external_repo_id}
-                    className="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-500 disabled:opacity-50"
                   >
                     {addingRepoId === repo.external_repo_id ? "Adding..." : "Add"}
-                  </button>
-                </li>
+                  </Button>
+                </Card>
               ))}
-          </ul>
+          </div>
         ) : (
-          <button
-            onClick={handleConnectGithub}
-            disabled={isConnecting}
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
-          >
+          <Button variant="outline" onClick={handleConnectGithub} disabled={isConnecting}>
             {isConnecting ? "Connecting..." : "Connect GitHub (mock)"}
-          </button>
+          </Button>
         )}
       </section>
 
       <section className="mt-8">
-        <div className="mb-2 flex justify-end">
+        <div className="mb-3 flex justify-end">
           <Link
             href={`/orgs/${orgId}/pr-reviews`}
-            className="text-sm text-gray-500 hover:text-gray-300"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             View past reviews &rarr;
           </Link>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
+import { Card, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/apiClient";
 import { describeStatus } from "@/lib/prReviews";
 
@@ -22,56 +23,61 @@ export default function PRReviewDetailPage() {
     },
   });
 
-  if (prReviewQuery.isLoading) return <main className="p-6 text-gray-400">Loading...</main>;
+  if (prReviewQuery.isLoading) {
+    return <main className="mx-auto max-w-3xl px-6 py-12 text-sm text-muted-foreground">Loading...</main>;
+  }
   const prReview = prReviewQuery.data;
   if (!prReview) return null;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <Link
-        href={`/orgs/${orgId}/pr-reviews`}
-        className="mb-4 inline-block text-sm text-gray-500 hover:text-gray-300"
-      >
-        &larr; Back to PR reviews
-      </Link>
+    <main className="mx-auto max-w-3xl px-6 py-12">
+      <Breadcrumbs
+        items={[
+          { label: "Organization", href: `/orgs/${orgId}` },
+          { label: "PR reviews", href: `/orgs/${orgId}/pr-reviews` },
+          { label: `#${prReview.pr_number}` },
+        ]}
+      />
 
-      <h1 className="mb-4 text-2xl font-semibold">
+      <h1 className="mb-4 text-2xl font-semibold tracking-tight">
         {prReview.owner}/{prReview.repo} #{prReview.pr_number}
       </h1>
 
-      <p className="mb-4 text-gray-300">{describeStatus(prReview)}</p>
+      <p className="mb-4 text-sm text-foreground/90">{describeStatus(prReview)}</p>
 
-      <div className="mb-4 rounded border border-gray-800 p-4">
-        <dl className="flex flex-col gap-2 text-sm">
-          <div className="flex justify-between">
-            <dt className="text-gray-500">Status</dt>
-            <dd>{prReview.status}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-gray-500">Commit</dt>
-            <dd className="font-mono text-xs">{prReview.commit_sha}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-gray-500">Findings</dt>
-            <dd>{prReview.findings_count}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-gray-500">Comments posted</dt>
-            <dd>{prReview.comments_posted}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-gray-500">Reviewed</dt>
-            <dd>{new Date(prReview.created_at).toLocaleString()}</dd>
-          </div>
-        </dl>
-      </div>
+      <Card className="mb-4 p-4 shadow-none">
+        <CardContent className="p-0">
+          <dl className="flex flex-col gap-2 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Status</dt>
+              <dd>{prReview.status}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Commit</dt>
+              <dd className="font-mono text-xs">{prReview.commit_sha}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Findings</dt>
+              <dd>{prReview.findings_count}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Comments posted</dt>
+              <dd>{prReview.comments_posted}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Reviewed</dt>
+              <dd>{new Date(prReview.created_at).toLocaleString()}</dd>
+            </div>
+          </dl>
+        </CardContent>
+      </Card>
 
       <div className="flex flex-col gap-2 text-sm">
         <a
           href={prReview.pr_url}
           target="_blank"
           rel="noreferrer"
-          className="text-blue-400 underline"
+          className="text-primary hover:underline"
         >
           View pull request on GitHub
         </a>
@@ -80,7 +86,7 @@ export default function PRReviewDetailPage() {
             href={prReview.review_url}
             target="_blank"
             rel="noreferrer"
-            className="text-blue-400 underline"
+            className="text-primary hover:underline"
           >
             View posted review
           </a>

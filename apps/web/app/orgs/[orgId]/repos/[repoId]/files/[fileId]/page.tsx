@@ -3,9 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "next/navigation";
 
-import { apiClient } from "@/lib/apiClient";
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
 import { SourceViewer } from "@/components/SourceViewer";
 import { SymbolOutline } from "@/components/SymbolOutline";
+import { apiClient } from "@/lib/apiClient";
 
 export default function FileDetailPage() {
   const { orgId, repoId, fileId } = useParams<{
@@ -29,15 +30,25 @@ export default function FileDetailPage() {
     },
   });
 
-  if (fileQuery.isLoading) return <main className="p-6 text-gray-400">Loading...</main>;
+  if (fileQuery.isLoading) {
+    return <main className="mx-auto max-w-5xl px-6 py-12 text-sm text-muted-foreground">Loading...</main>;
+  }
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-16">
+    <main className="mx-auto max-w-5xl px-6 py-12">
+      <Breadcrumbs
+        items={[
+          { label: "Organization", href: `/orgs/${orgId}` },
+          { label: "Repository", href: `/orgs/${orgId}/repos/${repoId}` },
+          { label: "Files", href: `/orgs/${orgId}/repos/${repoId}/files` },
+          { label: fileQuery.data?.path ?? "File" },
+        ]}
+      />
       <h1 className="mb-4 font-mono text-xl font-semibold">{fileQuery.data?.path}</h1>
       {fileQuery.data && (
         <div className="flex gap-6">
           <aside className="w-48 shrink-0">
-            <h2 className="mb-2 text-sm font-medium text-gray-500">Symbols</h2>
+            <h2 className="mb-2 text-sm font-medium text-muted-foreground">Symbols</h2>
             <SymbolOutline symbols={fileQuery.data.symbols} orgId={orgId} repoId={repoId} />
           </aside>
           <div className="min-w-0 flex-1">

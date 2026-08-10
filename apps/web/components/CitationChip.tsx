@@ -26,12 +26,12 @@ export function CitationChip({
   return (
     <Link
       href={href}
-      className="block rounded border border-gray-800 px-3 py-2 text-sm hover:bg-gray-900"
+      className="block rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted/40"
     >
-      <div className="font-mono text-blue-400">
+      <div className="font-mono text-primary">
         {citation.file_path}:{citation.start_line}-{citation.end_line}
       </div>
-      <div className="mt-1 truncate text-gray-400">{citation.snippet}</div>
+      <div className="mt-1 truncate text-muted-foreground">{citation.snippet}</div>
     </Link>
   );
 }

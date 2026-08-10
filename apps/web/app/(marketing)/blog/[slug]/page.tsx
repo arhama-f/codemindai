@@ -20,7 +20,12 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = getBlogPostMeta(slug);
   if (!post) return {};
-  return { title: `${post.title} — CodeMind AI`, description: post.description };
+  const title = `${post.title} — CodeMind AI`;
+  return {
+    title,
+    description: post.description,
+    openGraph: { title, description: post.description },
+  };
 }
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {

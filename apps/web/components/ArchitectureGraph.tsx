@@ -36,7 +36,7 @@ export function ArchitectureGraph({
   }
 
   return (
-    <div style={{ height: 520 }} className="rounded border border-gray-800">
+    <div style={{ height: 520 }} className="overflow-hidden rounded-lg border border-border">
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodes}
@@ -44,8 +44,9 @@ export function ArchitectureGraph({
           onNodeClick={handleNodeClick}
           fitView
           proOptions={{ hideAttribution: true }}
+          colorMode="dark"
         >
-          <Background />
+          <Background color="hsl(var(--border))" />
           <Controls />
         </ReactFlow>
       </ReactFlowProvider>

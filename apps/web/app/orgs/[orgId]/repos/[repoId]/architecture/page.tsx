@@ -3,8 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 
-import { apiClient } from "@/lib/apiClient";
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
 import { ArchitectureGraph } from "@/components/ArchitectureGraph";
+import { Badge } from "@/components/ui/badge";
+import { apiClient } from "@/lib/apiClient";
 
 export default function ArchitecturePage() {
   const { orgId, repoId } = useParams<{ orgId: string; repoId: string }>();
@@ -22,7 +24,7 @@ export default function ArchitecturePage() {
   });
 
   if (architectureQuery.isLoading) {
-    return <main className="p-6 text-gray-400">Loading...</main>;
+    return <main className="mx-auto max-w-5xl px-6 py-12 text-sm text-muted-foreground">Loading...</main>;
   }
 
   const nodes = architectureQuery.data?.nodes ?? [];
@@ -30,26 +32,33 @@ export default function ArchitecturePage() {
   const subsystems = architectureQuery.data?.subsystems ?? [];
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-16">
-      <h1 className="mb-2 text-2xl font-semibold">Architecture</h1>
-      <p className="mb-4 text-sm text-gray-500">
-        Solid edges are resolved imports within the repository; dashed edges point to
-        external dependencies.
+    <main className="mx-auto max-w-5xl px-6 py-12">
+      <Breadcrumbs
+        items={[
+          { label: "Organization", href: `/orgs/${orgId}` },
+          { label: "Repository", href: `/orgs/${orgId}/repos/${repoId}` },
+          { label: "Architecture" },
+        ]}
+      />
+      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Architecture</h1>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Solid edges are resolved imports within the repository; dashed edges point to external
+        dependencies.
       </p>
 
       {nodes.length === 0 ? (
-        <p className="text-gray-500">This repository hasn&apos;t been indexed yet.</p>
+        <p className="text-sm text-muted-foreground">This repository hasn&apos;t been indexed yet.</p>
       ) : (
         <>
           <ArchitectureGraph orgId={orgId} repoId={repoId} apiNodes={nodes} apiEdges={edges} />
           {subsystems.length > 0 && (
-            <ul className="mt-4 flex flex-wrap gap-3 text-sm text-gray-400">
+            <div className="mt-4 flex flex-wrap gap-2">
               {subsystems.map((subsystem) => (
-                <li key={subsystem.name}>
+                <Badge key={subsystem.name} variant="outline">
                   {subsystem.name} ({subsystem.file_ids.length})
-                </li>
+                </Badge>
               ))}
-            </ul>
+            </div>
           )}
         </>
       )}

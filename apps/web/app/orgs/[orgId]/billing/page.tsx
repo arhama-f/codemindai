@@ -1,10 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/apiClient";
 
 const PLAN_LABELS: Record<string, string> = { free: "Free", pro: "Pro", team: "Team" };
@@ -12,19 +14,16 @@ const PLAN_LABELS: Record<string, string> = { free: "Free", pro: "Pro", team: "T
 function UsageBar({ label, used, limit }: { label: string; used: number; limit: number | null }) {
   const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   return (
-    <div className="mb-4">
-      <div className="mb-1 flex justify-between text-sm text-gray-400">
-        <span>{label}</span>
-        <span>
+    <div className="mb-4 last:mb-0">
+      <div className="mb-1.5 flex justify-between text-sm">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="text-foreground/90">
           {used} {limit === null ? "" : `/ ${limit}`}
         </span>
       </div>
       {limit !== null && (
-        <div className="h-2 rounded bg-gray-800">
-          <div
-            className="h-2 rounded bg-blue-600"
-            style={{ width: `${pct}%` }}
-          />
+        <div className="h-1.5 rounded-full bg-muted">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
         </div>
       )}
     </div>
@@ -75,68 +74,63 @@ export default function BillingPage() {
     window.location.href = data.url;
   }
 
-  if (billingQuery.isLoading) return <main className="p-6 text-gray-400">Loading...</main>;
+  if (billingQuery.isLoading) {
+    return <main className="mx-auto max-w-2xl px-6 py-12 text-sm text-muted-foreground">Loading...</main>;
+  }
   const billing = billingQuery.data;
   if (!billing) return null;
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <Link
-        href={`/orgs/${orgId}`}
-        className="mb-4 inline-block text-sm text-gray-500 hover:text-gray-300"
-      >
-        &larr; Back to organization
-      </Link>
+    <main className="mx-auto max-w-2xl px-6 py-12">
+      <Breadcrumbs
+        items={[{ label: "Organization", href: `/orgs/${orgId}` }, { label: "Billing" }]}
+      />
 
-      <h1 className="mb-1 text-2xl font-semibold">Billing</h1>
-      <p className="mb-8 text-gray-400">
-        Current plan: <span className="font-medium">{PLAN_LABELS[billing.plan]}</span>{" "}
-        <span className="text-sm text-gray-500">({billing.status})</span>
+      <h1 className="mb-1 text-2xl font-semibold tracking-tight">Billing</h1>
+      <p className="mb-8 text-muted-foreground">
+        Current plan: <span className="font-medium text-foreground">{PLAN_LABELS[billing.plan]}</span>{" "}
+        <span className="text-sm">({billing.status})</span>
       </p>
 
-      <section className="mb-8 rounded border border-gray-800 p-4">
-        <h2 className="mb-3 text-sm font-medium text-gray-500">Usage this month</h2>
-        <UsageBar
-          label="Repositories"
-          used={billing.usage.repositories.used}
-          limit={billing.usage.repositories.limit}
-        />
-        <UsageBar
-          label="AI actions"
-          used={billing.usage.ai_actions_per_month.used}
-          limit={billing.usage.ai_actions_per_month.limit}
-        />
-      </section>
+      <Card className="mb-8 gap-2 p-4 shadow-none">
+        <CardHeader className="p-0">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Usage this month</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <UsageBar
+            label="Repositories"
+            used={billing.usage.repositories.used}
+            limit={billing.usage.repositories.limit}
+          />
+          <UsageBar
+            label="AI actions"
+            used={billing.usage.ai_actions_per_month.used}
+            limit={billing.usage.ai_actions_per_month.limit}
+          />
+        </CardContent>
+      </Card>
 
-      {actionError && <p className="mb-4 text-sm text-red-400">{actionError}</p>}
+      {actionError && (
+        <p className="mb-4 text-sm text-destructive" role="alert">
+          {actionError}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-3">
         {billing.plan !== "pro" && (
-          <button
-            onClick={() => handleUpgrade("pro")}
-            disabled={isRedirecting}
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
-          >
+          <Button onClick={() => handleUpgrade("pro")} disabled={isRedirecting}>
             Upgrade to Pro
-          </button>
+          </Button>
         )}
         {billing.plan !== "team" && (
-          <button
-            onClick={() => handleUpgrade("team")}
-            disabled={isRedirecting}
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
-          >
+          <Button onClick={() => handleUpgrade("team")} disabled={isRedirecting}>
             Upgrade to Team
-          </button>
+          </Button>
         )}
         {billing.plan !== "free" && (
-          <button
-            onClick={handleManage}
-            disabled={isRedirecting}
-            className="rounded border border-gray-700 px-4 py-2 hover:bg-gray-900 disabled:opacity-50"
-          >
+          <Button variant="outline" onClick={handleManage} disabled={isRedirecting}>
             Manage subscription
-          </button>
+          </Button>
         )}
       </div>
     </main>

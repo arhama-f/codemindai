@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-import { apiClient } from "@/lib/apiClient";
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
 import { FileTree } from "@/components/FileTree";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { apiClient } from "@/lib/apiClient";
 
 export default function FilesPage() {
   const { orgId, repoId } = useParams<{ orgId: string; repoId: string }>();
@@ -38,43 +41,47 @@ export default function FilesPage() {
   });
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="text-2xl font-semibold">Files</h1>
+    <main className="mx-auto max-w-2xl px-6 py-12">
+      <Breadcrumbs
+        items={[
+          { label: "Organization", href: `/orgs/${orgId}` },
+          { label: "Repository", href: `/orgs/${orgId}/repos/${repoId}` },
+          { label: "Files" },
+        ]}
+      />
+      <h1 className="mb-4 text-2xl font-semibold tracking-tight">Files</h1>
 
-      <input
-        className="mt-4 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2"
+      <Input
         placeholder="Search symbols..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
 
       {query && (
-        <ul className="mt-3 flex flex-col gap-2">
+        <div className="mt-3 flex flex-col gap-2">
           {symbolsQuery.data?.map((symbol) => (
-            <li key={symbol.id}>
-              <Link
-                href={`/orgs/${orgId}/repos/${repoId}/files/${symbol.file_id}?start=${symbol.start_line}&end=${symbol.end_line}`}
-                className="block rounded border border-gray-800 px-3 py-2 text-sm hover:bg-gray-900"
-              >
-                <span className="font-mono text-blue-400">{symbol.name}</span>{" "}
-                <span className="text-gray-500">({symbol.kind})</span>{" "}
-                <span className="text-gray-600">
+            <Link
+              key={symbol.id}
+              href={`/orgs/${orgId}/repos/${repoId}/files/${symbol.file_id}?start=${symbol.start_line}&end=${symbol.end_line}`}
+            >
+              <Card className="p-3 text-sm shadow-none transition-colors hover:bg-muted/40">
+                <span className="font-mono text-primary">{symbol.name}</span>{" "}
+                <span className="text-muted-foreground">({symbol.kind})</span>{" "}
+                <span className="text-muted-foreground/70">
                   {symbol.file_path}:{symbol.start_line}
                 </span>
-              </Link>
-            </li>
+              </Card>
+            </Link>
           ))}
           {symbolsQuery.data?.length === 0 && (
-            <p className="text-sm text-gray-500">No symbols match &quot;{query}&quot;.</p>
+            <p className="text-sm text-muted-foreground">No symbols match &quot;{query}&quot;.</p>
           )}
-        </ul>
+        </div>
       )}
 
-      <div className="mt-6 rounded border border-gray-800 py-2">
-        {filesQuery.data && (
-          <FileTree files={filesQuery.data} orgId={orgId} repoId={repoId} />
-        )}
-      </div>
+      <Card className="mt-6 gap-0 py-2 shadow-none">
+        {filesQuery.data && <FileTree files={filesQuery.data} orgId={orgId} repoId={repoId} />}
+      </Card>
     </main>
   );
 }

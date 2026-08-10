@@ -15,6 +15,10 @@ import { Card } from "@/components/ui/card";
 export const metadata: Metadata = {
   title: "Pricing — CodeMind AI",
   description: "Simple, usage-based pricing for CodeMind AI.",
+  openGraph: {
+    title: "Pricing — CodeMind AI",
+    description: "Simple, usage-based pricing for CodeMind AI.",
+  },
 };
 
 const PLANS = [

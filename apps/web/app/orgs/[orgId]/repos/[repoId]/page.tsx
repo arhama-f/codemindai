@@ -1,12 +1,24 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FolderTree, MessageCircle, Network, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-import { apiClient } from "@/lib/apiClient";
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
 import { JobProgressBar } from "@/components/JobProgressBar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { apiClient } from "@/lib/apiClient";
+
+const SECTIONS = [
+  { key: "files", label: "Explore files", description: "Browse the indexed file tree.", icon: FolderTree },
+  { key: "ask", label: "Ask a question", description: "Ask anything about this repository.", icon: MessageCircle },
+  { key: "architecture", label: "Architecture", description: "View the dependency graph.", icon: Network },
+  { key: "findings", label: "Findings", description: "Bugs, security, and performance issues.", icon: ShieldAlert },
+];
 
 export default function RepositoryDetailPage() {
   const { orgId, repoId } = useParams<{ orgId: string; repoId: string }>();
@@ -59,22 +71,32 @@ export default function RepositoryDetailPage() {
   const status = repoQuery.data?.latest_index_status;
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="text-2xl font-semibold">{repoQuery.data?.full_name}</h1>
-      <p className="mt-1 text-sm text-gray-500">Default branch: {repoQuery.data?.default_branch}</p>
+    <main className="mx-auto max-w-3xl px-6 py-12">
+      <Breadcrumbs
+        items={[
+          { label: "Organization", href: `/orgs/${orgId}` },
+          { label: repoQuery.data?.full_name ?? "Repository" },
+        ]}
+      />
+
+      <h1 className="text-2xl font-semibold tracking-tight">{repoQuery.data?.full_name}</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Default branch: {repoQuery.data?.default_branch}
+      </p>
 
       <section className="mt-8">
-        <h2 className="mb-2 text-lg font-medium">Indexing</h2>
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">Indexing</h2>
         {status === "completed" ? (
-          <p className="text-sm text-green-400">Indexed</p>
+          <Badge variant="outline" className="border-emerald-500/30 text-emerald-400">
+            Indexed
+          </Badge>
         ) : (
-          <button
+          <Button
             onClick={handleStartIndexing}
             disabled={isStarting || status === "running" || status === "pending"}
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
           >
             {isStarting ? "Starting..." : "Run indexing"}
-          </button>
+          </Button>
         )}
         {jobId && (
           <div className="mt-3">
@@ -86,42 +108,31 @@ export default function RepositoryDetailPage() {
       {status === "completed" && (
         <>
           <section className="mt-8">
-            <h2 className="mb-2 text-lg font-medium">Summary</h2>
-            <p className="text-gray-300">{summaryQuery.data?.repository_summary}</p>
+            <h2 className="mb-3 text-sm font-medium text-muted-foreground">Summary</h2>
+            <p className="text-sm text-foreground/90">{summaryQuery.data?.repository_summary}</p>
             <ul className="mt-3 flex flex-col gap-2">
               {summaryQuery.data?.directories.map((dir) => (
-                <li key={dir.path} className="text-sm text-gray-400">
-                  <span className="font-mono text-gray-300">{dir.path}</span>: {dir.summary}
+                <li key={dir.path} className="text-sm text-muted-foreground">
+                  <span className="font-mono text-foreground/90">{dir.path}</span>: {dir.summary}
                 </li>
               ))}
             </ul>
           </section>
 
-          <section className="mt-8 flex gap-4">
-            <Link
-              href={`/orgs/${orgId}/repos/${repoId}/files`}
-              className="rounded border border-gray-700 px-4 py-2 hover:bg-gray-800"
-            >
-              Explore files
-            </Link>
-            <Link
-              href={`/orgs/${orgId}/repos/${repoId}/ask`}
-              className="rounded border border-gray-700 px-4 py-2 hover:bg-gray-800"
-            >
-              Ask a question
-            </Link>
-            <Link
-              href={`/orgs/${orgId}/repos/${repoId}/architecture`}
-              className="rounded border border-gray-700 px-4 py-2 hover:bg-gray-800"
-            >
-              Architecture
-            </Link>
-            <Link
-              href={`/orgs/${orgId}/repos/${repoId}/findings`}
-              className="rounded border border-gray-700 px-4 py-2 hover:bg-gray-800"
-            >
-              Findings
-            </Link>
+          <section className="mt-8 grid gap-3 sm:grid-cols-2">
+            {SECTIONS.map((section) => (
+              <Link key={section.key} href={`/orgs/${orgId}/repos/${repoId}/${section.key}`}>
+                <Card className="h-full gap-2 p-4 shadow-none transition-all hover:-translate-y-0.5 hover:shadow-md">
+                  <CardContent className="flex items-start gap-3 p-0">
+                    <section.icon className="mt-0.5 size-5 shrink-0 text-primary" />
+                    <div>
+                      <CardTitle className="text-sm">{section.label}</CardTitle>
+                      <p className="mt-1 text-sm text-muted-foreground">{section.description}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
           </section>
         </>
       )}

@@ -1,11 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 
-import { apiClient } from "@/lib/apiClient";
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
 import { PRReviewsList } from "@/components/PRReviewsList";
+import { apiClient } from "@/lib/apiClient";
 
 export default function PRReviewsPage() {
   const { orgId } = useParams<{ orgId: string }>();
@@ -22,16 +22,11 @@ export default function PRReviewsPage() {
   });
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <Link
-        href={`/orgs/${orgId}`}
-        className="mb-4 inline-block text-sm text-gray-500 hover:text-gray-300"
-      >
-        &larr; Back to organization
-      </Link>
-
-      <h1 className="mb-6 text-2xl font-semibold">PR reviews</h1>
-
+    <main className="mx-auto max-w-3xl px-6 py-12">
+      <Breadcrumbs
+        items={[{ label: "Organization", href: `/orgs/${orgId}` }, { label: "PR reviews" }]}
+      />
+      <h1 className="mb-6 text-2xl font-semibold tracking-tight">PR reviews</h1>
       {prReviewsQuery.data && <PRReviewsList orgId={orgId} prReviews={prReviewsQuery.data} />}
     </main>
   );

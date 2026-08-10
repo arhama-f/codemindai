@@ -9,6 +9,11 @@ const PRODUCT_LINKS = [
   { href: "/login", label: "Sign in" },
 ];
 
+const LEGAL_LINKS = [
+  { href: "/terms", label: "Terms of Service" },
+  { href: "/privacy", label: "Privacy Policy" },
+];
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-border/40">
@@ -29,6 +34,22 @@ export function SiteFooter() {
             <h3 className="mb-3 text-sm font-medium">Product</h3>
             <ul className="flex flex-col gap-2">
               {PRODUCT_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="mb-3 text-sm font-medium">Legal</h3>
+            <ul className="flex flex-col gap-2">
+              {LEGAL_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}

@@ -71,7 +71,11 @@ export default function LoginPage() {
                 required
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            )}
             <Button type="submit" disabled={isSubmitting} className="mt-1 h-10">
               {isSubmitting ? "Signing in..." : "Sign in"}
             </Button>

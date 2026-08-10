@@ -3,8 +3,11 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 
-import { apiClient } from "@/lib/apiClient";
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
 import { VerificationBanner } from "@/components/VerificationBanner";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { apiClient } from "@/lib/apiClient";
 
 export default function OrgsPage() {
   const { data, isLoading, isError } = useQuery({
@@ -16,12 +19,14 @@ export default function OrgsPage() {
     },
   });
 
-  if (isLoading) return <main className="p-6 text-gray-400">Loading...</main>;
+  if (isLoading) {
+    return <main className="mx-auto max-w-2xl px-6 py-12 text-sm text-muted-foreground">Loading...</main>;
+  }
   if (isError) {
     return (
-      <main className="p-6 text-gray-400">
+      <main className="mx-auto max-w-2xl px-6 py-12 text-sm text-muted-foreground">
         Failed to load organizations.{" "}
-        <Link href="/login" className="underline">
+        <Link href="/login" className="text-primary hover:underline">
           Sign in
         </Link>
       </main>
@@ -29,31 +34,26 @@ export default function OrgsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
+    <main className="mx-auto max-w-2xl px-6 py-12">
+      <Breadcrumbs items={[{ label: "Organizations" }]} />
       <VerificationBanner />
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Organizations</h1>
-        <Link
-          href="/orgs/new"
-          className="rounded bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-500"
-        >
+        <h1 className="text-2xl font-semibold tracking-tight">Organizations</h1>
+        <Button size="sm" nativeButton={false} render={<Link href="/orgs/new" />}>
           New organization
-        </Link>
+        </Button>
       </div>
-      <ul className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
         {data?.map((org) => (
-          <li key={org.id}>
-            <Link
-              href={`/orgs/${org.id}`}
-              className="block rounded border border-gray-800 px-4 py-3 hover:bg-gray-900"
-            >
+          <Link key={org.id} href={`/orgs/${org.id}`}>
+            <Card className="p-4 shadow-none transition-colors hover:bg-muted/40">
               <span className="font-medium">{org.name}</span>{" "}
-              <span className="text-sm text-gray-500">({org.role})</span>
-            </Link>
-          </li>
+              <span className="text-sm text-muted-foreground">({org.role})</span>
+            </Card>
+          </Link>
         ))}
-        {data?.length === 0 && <p className="text-gray-500">No organizations yet.</p>}
-      </ul>
+        {data?.length === 0 && <p className="text-sm text-muted-foreground">No organizations yet.</p>}
+      </div>
     </main>
   );
 }

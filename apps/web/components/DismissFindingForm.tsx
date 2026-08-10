@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/apiClient";
 
 export function DismissFindingForm({
@@ -38,20 +40,15 @@ export function DismissFindingForm({
 
   return (
     <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
-      <textarea
-        className="rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm"
+      <Textarea
         placeholder="Why is this being dismissed? (e.g. false positive, accepted risk)"
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         required
       />
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="self-start rounded bg-red-900 px-4 py-2 text-sm text-white hover:bg-red-800 disabled:opacity-50"
-      >
+      <Button type="submit" variant="destructive" disabled={isSubmitting} className="self-start">
         {isSubmitting ? "Dismissing..." : "Dismiss finding"}
-      </button>
+      </Button>
     </form>
   );
 }

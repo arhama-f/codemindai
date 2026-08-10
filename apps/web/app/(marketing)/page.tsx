@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   FileSearch,
   GitPullRequest,
@@ -11,6 +12,26 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+
+const TITLE = "CodeMind AI — An AI staff engineer that actually reads your code";
+const DESCRIPTION =
+  "CodeMind AI indexes your repository, builds a real dependency graph, and answers questions with citations — so you can trust what it tells you, not just believe it.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: { title: TITLE, description: DESCRIPTION },
+};
+
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "CodeMind AI",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "Web",
+  description: DESCRIPTION,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+};
 
 const FEATURES = [
   {
@@ -72,6 +93,10 @@ const STEPS = [
 export default function HomePage() {
   return (
     <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+      />
       <section className="mx-auto max-w-6xl px-6 pt-20 pb-24 md:pt-28 md:pb-32">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 text-center">
           <Badge variant="secondary" className="h-auto px-3 py-1 text-xs">

@@ -2,8 +2,10 @@
 
 import { FormEvent, useState } from "react";
 
-import { apiClient } from "@/lib/apiClient";
 import { CitationChip, type Citation } from "@/components/CitationChip";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { apiClient } from "@/lib/apiClient";
 
 export function AskForm({
   orgId,
@@ -45,30 +47,30 @@ export function AskForm({
   return (
     <div className="flex flex-col gap-4">
       <form className="flex gap-2" onSubmit={handleSubmit}>
-        <input
-          className="flex-1 rounded border border-gray-700 bg-gray-900 px-3 py-2"
+        <Input
+          className="h-10 flex-1"
           placeholder="Ask a question about this repository..."
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           required
         />
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
-        >
+        <Button type="submit" className="h-10" disabled={isSubmitting}>
           {isSubmitting ? "Asking..." : "Ask"}
-        </button>
+        </Button>
       </form>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      )}
 
       {answer && (
         <div className="flex flex-col gap-3">
-          <p className="text-gray-200">{answer}</p>
+          <p className="text-sm text-foreground/90">{answer}</p>
           {citations.length > 0 && (
             <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium text-gray-500">Citations</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Citations</h3>
               {citations.map((citation) => (
                 <CitationChip
                   key={`${citation.file_path}:${citation.start_line}`}
