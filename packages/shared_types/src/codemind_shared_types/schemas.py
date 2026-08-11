@@ -192,3 +192,7 @@ class OAuthUserInfoDTO(BaseModel):
     email: str
     provider_user_id: str
     full_name: str | None = None
+    # Only populated when the caller requested a broader scope (e.g. the
+    # GitHub repo-connect flow) — login flows never read these two fields.
+    access_token: str | None = None
+    username: str | None = None

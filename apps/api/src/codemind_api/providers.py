@@ -8,17 +8,63 @@ from codemind_github_client import (
     GitHubWriteClient,
     MockGitHubClient,
     MockGitHubWriteClient,
+    OAuthTokenGitHubClient,
     PATGitHubWriteClient,
 )
 from codemind_oauth_client import GitHubOAuthProvider, GoogleOAuthProvider, OAuthProvider
 from fastapi import HTTPException, status
+from sqlalchemy import select
 
 from codemind_api.config import settings
+from codemind_api.db import SessionLocal
+from codemind_shared_types.models import GithubInstallation
 
 
 @lru_cache
 def get_github_client() -> GitHubClient:
     return MockGitHubClient(demo_repo_root=settings.demo_repo_root)
+
+
+async def _resolve_installation_access_token(external_installation_id: str) -> str:
+    async with SessionLocal() as session:
+        result = await session.execute(
+            select(GithubInstallation.access_token).where(
+                GithubInstallation.external_installation_id == external_installation_id
+            )
+        )
+        token = result.scalar_one_or_none()
+    if not token:
+        raise RuntimeError(f"No stored GitHub access token for installation {external_installation_id}")
+    return token
+
+
+@lru_cache
+def get_real_github_client() -> GitHubClient:
+    return OAuthTokenGitHubClient(resolve_access_token=_resolve_installation_access_token)
+
+
+def get_github_client_for_installation(installation: GithubInstallation) -> GitHubClient:
+    """Real installations (provider="github", created by the OAuth connect
+    callback) use OAuthTokenGitHubClient; legacy/demo installations
+    (provider="mock", from the old POST /connect route) keep using the
+    mock — dispatch is per-row, not per-process."""
+    if installation.provider == "github":
+        return get_real_github_client()
+    return get_github_client()
+
+
+def get_github_repo_oauth_provider() -> GitHubOAuthProvider:
+    """Same GITHUB_OAUTH_CLIENT_ID/SECRET as login, different redirect_uri —
+    GitHub requires an exact match against the OAuth App's registered
+    callback URL, so repo-connect needs its own fixed callback distinct
+    from login's. 501s if unconfigured, same as get_oauth_provider."""
+    if not (settings.github_oauth_client_id and settings.github_oauth_client_secret):
+        raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, detail="GitHub OAuth is not configured")
+    return GitHubOAuthProvider(
+        client_id=settings.github_oauth_client_id,
+        client_secret=settings.github_oauth_client_secret,
+        redirect_uri=f"{settings.api_origin}/api/organizations/github/connect/callback",
+    )
 
 
 @lru_cache

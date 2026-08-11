@@ -7,10 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from codemind_api.db import get_db
 from codemind_api.deps import get_org_membership
-from codemind_api.providers import get_github_client
+from codemind_api.providers import get_github_client, get_github_client_for_installation
 from codemind_github_client import GitHubClient
 from codemind_shared_types.models import GithubInstallation, OrganizationMember
 
+# The POST /connect + list_installations() flow below is the mock/demo-only
+# seed path (see docs/architecture.md) — real connections go through
+# github_connect.py's OAuth redirect flow instead, which the frontend now
+# links to. This route stays functional for local dev without GitHub OAuth
+# credentials configured, but is no longer linked from the UI.
 router = APIRouter(prefix="/api/organizations/{org_id}/github", tags=["github"])
 
 
@@ -55,7 +60,6 @@ async def connect_github(
 async def list_available_repositories(
     org_id: UUID,
     db: AsyncSession = Depends(get_db),
-    github_client: GitHubClient = Depends(get_github_client),
     _membership: OrganizationMember = Depends(get_org_membership),
 ) -> list[RepositoryListingResponse]:
     result = await db.execute(
@@ -65,6 +69,7 @@ async def list_available_repositories(
     if installation is None:
         return []
 
+    github_client = get_github_client_for_installation(installation)
     repos = await github_client.list_repositories(
         installation_id=installation.external_installation_id
     )

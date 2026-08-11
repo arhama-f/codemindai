@@ -6,6 +6,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from codemind_api.config import settings
+
+if settings.sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+    sentry_sdk.init(dsn=settings.sentry_dsn, integrations=[FastApiIntegration()])
 from codemind_api.providers import get_embedding_provider
 from codemind_api.routers import (
     architecture,
@@ -19,6 +25,7 @@ from codemind_api.routers import (
     finding_explanations,
     findings,
     github,
+    github_connect,
     impact,
     indexing,
     organizations,
@@ -60,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_oauth.router)
     app.include_router(organizations.router)
     app.include_router(github.router)
+    app.include_router(github_connect.router)
     app.include_router(repositories.router)
     app.include_router(indexing.router)
     app.include_router(files.router)

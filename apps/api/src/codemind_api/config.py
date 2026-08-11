@@ -57,5 +57,10 @@ class Settings(BaseSettings):
     # webServer env, never in production.
     expose_test_endpoints: bool = False
 
+    # Error monitoring. Unset by default: Sentry is never initialized until a
+    # real DSN is configured — same "inert unless configured" convention as
+    # every other provider above.
+    sentry_dsn: str | None = None
+
 
 settings = Settings()

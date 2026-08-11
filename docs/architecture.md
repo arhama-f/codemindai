@@ -328,6 +328,25 @@ and gates publish behind an inline two-step confirmation (not a `window.confirm`
 to match the rest of the app's styling) since it's a hard-to-reverse action against
 a real external repo.
 
+## GitHub repo-connect (read path) (`apps/api/src/codemind_api/routers/github_connect.py`)
+
+A separate, later addition — closes the gap where `GithubInstallation`/`Repository`
+listing only ever worked against `MockGitHubClient`'s hardcoded demo repo, even with
+real GitHub OAuth already configured for login. Same **no GitHub App/webhooks**
+boundary as the write path above, but a different credential shape: rather than one
+operator-configured PAT against one target repo, each org's connecting user does a
+real OAuth authorization-code flow requesting `repo` scope (reusing
+`GitHubOAuthProvider`, the same class already used for login, just with a broader
+scope and — unlike login — its resulting access token persisted on the
+`GithubInstallation` row instead of discarded). `OAuthTokenGitHubClient`
+(`packages/github_client`) is the real `GitHubClient` implementation this enables;
+dispatch between it and `MockGitHubClient` happens per-`GithubInstallation`-row via
+`provider` (`"github"` vs `"mock"`), not per-process, so the old mock `POST
+.../github/connect` seed path (used by tests and local dev without OAuth
+credentials) keeps working unchanged alongside it. This is unrelated to, and does
+not change, the `GITHUB_PAT`-based write path documented above — a user can have a
+real read connection without any publish/PR-review target configured, and vice versa.
+
 ## Full PR review (`apps/api/src/codemind_api/routers/pr_review.py`)
 
 Phase 5: reviewing an *existing* GitHub PR's diff — posting inline review comments

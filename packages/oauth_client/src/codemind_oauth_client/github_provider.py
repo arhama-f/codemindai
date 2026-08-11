@@ -20,11 +20,11 @@ class GitHubOAuthProvider(OAuthProvider):
         self._client_secret = client_secret
         self._redirect_uri = redirect_uri
 
-    def authorize_url(self, *, state: str) -> str:
+    def authorize_url(self, *, state: str, scope: str | None = None) -> str:
         params = {
             "client_id": self._client_id,
             "redirect_uri": self._redirect_uri,
-            "scope": "read:user user:email",
+            "scope": scope or "read:user user:email",
             "state": state,
         }
         query = "&".join(f"{k}={v}" for k, v in params.items())
@@ -60,5 +60,9 @@ class GitHubOAuthProvider(OAuthProvider):
                 email = primary["email"] if primary else emails_response.json()[0]["email"]
 
         return OAuthUserInfoDTO(
-            email=email, provider_user_id=str(user_data["id"]), full_name=user_data.get("name")
+            email=email,
+            provider_user_id=str(user_data["id"]),
+            full_name=user_data.get("name"),
+            access_token=access_token,
+            username=user_data.get("login"),
         )

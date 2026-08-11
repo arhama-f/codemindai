@@ -18,6 +18,13 @@ COPY packages/api-client packages/api-client
 # read at runtime — must be set here, not just in docker-compose's environment.
 ARG NEXT_PUBLIC_API_URL=http://localhost:8010
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# Error monitoring / analytics — empty by default, both stay fully inert.
+ARG NEXT_PUBLIC_SENTRY_DSN=
+ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+ARG NEXT_PUBLIC_POSTHOG_KEY=
+ENV NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
+ARG NEXT_PUBLIC_POSTHOG_HOST=
+ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
 RUN npm run build --workspace=apps/web
 
 # `output: "standalone"` (apps/web/next.config.ts) produces a minimal server

@@ -72,6 +72,9 @@ class GithubInstallation(UUIDPKMixin, CreatedAtMixin, Base):
     provider: Mapped[str] = mapped_column(String, server_default="mock")
     external_installation_id: Mapped[str] = mapped_column(String, nullable=False)
     account_login: Mapped[str] = mapped_column(String, nullable=False)
+    # Real GitHub OAuth access token for provider="github" rows; null for
+    # provider="mock" rows. Never serialized in any API response.
+    access_token: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class Repository(UUIDPKMixin, CreatedAtMixin, Base):

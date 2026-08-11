@@ -7,9 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from codemind_api.db import get_db
 from codemind_api.deps import get_org_membership, require_within_plan_limit
-from codemind_api.providers import get_github_client
+from codemind_api.providers import get_github_client_for_installation
 from codemind_api.repository_index_utils import get_latest_analysis_run
-from codemind_github_client import GitHubClient
 from codemind_shared_types.models import GithubInstallation, Repository, RepositoryIndex
 
 router = APIRouter(prefix="/api/organizations/{org_id}/repositories", tags=["repositories"])
@@ -58,7 +57,6 @@ async def add_repository(
     org_id: UUID,
     payload: AddRepositoryRequest,
     db: AsyncSession = Depends(get_db),
-    github_client: GitHubClient = Depends(get_github_client),
     _membership=Depends(get_org_membership),
     _plan_limit=Depends(require_within_plan_limit("repositories")),
 ) -> RepositoryResponse:
@@ -70,6 +68,7 @@ async def add_repository(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="GitHub is not connected for this organization"
         )
+    github_client = get_github_client_for_installation(installation)
 
     existing = await db.execute(
         select(Repository).where(

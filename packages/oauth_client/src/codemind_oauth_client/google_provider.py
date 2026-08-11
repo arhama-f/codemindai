@@ -17,7 +17,9 @@ class GoogleOAuthProvider(OAuthProvider):
         self._client_secret = client_secret
         self._redirect_uri = redirect_uri
 
-    def authorize_url(self, *, state: str) -> str:
+    def authorize_url(self, *, state: str, scope: str | None = None) -> str:
+        # Google login always uses this fixed scope; the `scope` param exists
+        # only for ABC conformance with the GitHub repo-connect use case.
         params = {
             "client_id": self._client_id,
             "redirect_uri": self._redirect_uri,

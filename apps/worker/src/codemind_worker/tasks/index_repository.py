@@ -38,7 +38,6 @@ async def index_repository(ctx: dict, *, repository_id: str, job_run_id: str) ->
     works identically whether invoked directly (as in tests) or via the real
     arq worker."""
     sessionmaker = ctx["db_sessionmaker"]
-    github_client: GitHubClient = ctx["github_client"]
     ai_provider: AIProvider = ctx["ai_provider"]
     embedding_provider: EmbeddingProvider = ctx["embedding_provider"]
 
@@ -46,6 +45,9 @@ async def index_repository(ctx: dict, *, repository_id: str, job_run_id: str) ->
         job_run = await session.get(JobRun, UUID(job_run_id))
         repository = await session.get(Repository, UUID(repository_id))
         installation = await session.get(GithubInstallation, repository.installation_id)
+        github_client: GitHubClient = (
+            ctx["real_github_client"] if installation.provider == "github" else ctx["github_client"]
+        )
 
         job_run.status = "running"
         job_run.started_at = _utcnow()

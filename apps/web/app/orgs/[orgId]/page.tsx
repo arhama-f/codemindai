@@ -9,12 +9,11 @@ import { Breadcrumbs } from "@/components/app/breadcrumbs";
 import { PRReviewPanel } from "@/components/PRReviewPanel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { apiClient } from "@/lib/apiClient";
+import { API_URL, apiClient } from "@/lib/apiClient";
 
 export default function OrganizationDetailPage() {
   const { orgId } = useParams<{ orgId: string }>();
   const queryClient = useQueryClient();
-  const [isConnecting, setIsConnecting] = useState(false);
   const [addingRepoId, setAddingRepoId] = useState<string | null>(null);
 
   const orgQuery = useQuery({
@@ -50,15 +49,6 @@ export default function OrganizationDetailPage() {
       return data;
     },
   });
-
-  async function handleConnectGithub() {
-    setIsConnecting(true);
-    await apiClient.POST("/api/organizations/{org_id}/github/connect", {
-      params: { path: { org_id: orgId } },
-    });
-    setIsConnecting(false);
-    queryClient.invalidateQueries({ queryKey: ["available-repositories", orgId] });
-  }
 
   async function handleAddRepository(externalRepoId: string) {
     setAddingRepoId(externalRepoId);
@@ -126,8 +116,12 @@ export default function OrganizationDetailPage() {
               ))}
           </div>
         ) : (
-          <Button variant="outline" onClick={handleConnectGithub} disabled={isConnecting}>
-            {isConnecting ? "Connecting..." : "Connect GitHub (mock)"}
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<a href={`${API_URL}/api/organizations/${orgId}/github/connect/start`} />}
+          >
+            Connect GitHub
           </Button>
         )}
       </section>
