@@ -43,16 +43,6 @@ export function SiteFooter() {
                   </Link>
                 </li>
               ))}
-              <li>
-                <a
-                  href="https://www.psychflo.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Psychflo
-                </a>
-              </li>
             </ul>
           </div>
 
@@ -76,7 +66,16 @@ export function SiteFooter() {
         <Separator className="my-10" />
 
         <p className="text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} CodeMind AI. All rights reserved.
+          &copy; {new Date().getFullYear()} CodeMind AI. All rights reserved. A product of{" "}
+          <a
+            href="https://www.psychflo.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline transition-colors hover:text-foreground"
+          >
+            Psychflo
+          </a>
+          .
         </p>
       </div>
     </footer>
