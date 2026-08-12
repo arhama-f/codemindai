@@ -54,15 +54,19 @@ def get_github_client_for_installation(installation: GithubInstallation) -> GitH
 
 
 def get_github_repo_oauth_provider() -> GitHubOAuthProvider:
-    """Same GITHUB_OAUTH_CLIENT_ID/SECRET as login, different redirect_uri —
-    GitHub requires an exact match against the OAuth App's registered
-    callback URL, so repo-connect needs its own fixed callback distinct
-    from login's. 501s if unconfigured, same as get_oauth_provider."""
-    if not (settings.github_oauth_client_id and settings.github_oauth_client_secret):
+    """Prefers GITHUB_REPO_OAUTH_CLIENT_ID/SECRET (a second GitHub OAuth App
+    registered with this flow's own callback URL) since a GitHub OAuth App
+    only supports one callback URL and login already claims the other one.
+    Falls back to the login app's credentials if the second app isn't
+    configured — works as long as only one of the two flows is actually
+    in use. 501s if neither is configured, same as get_oauth_provider."""
+    client_id = settings.github_repo_oauth_client_id or settings.github_oauth_client_id
+    client_secret = settings.github_repo_oauth_client_secret or settings.github_oauth_client_secret
+    if not (client_id and client_secret):
         raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, detail="GitHub OAuth is not configured")
     return GitHubOAuthProvider(
-        client_id=settings.github_oauth_client_id,
-        client_secret=settings.github_oauth_client_secret,
+        client_id=client_id,
+        client_secret=client_secret,
         redirect_uri=f"{settings.api_origin}/api/organizations/github/connect/callback",
     )
 

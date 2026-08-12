@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     google_client_secret: str | None = None
     github_oauth_client_id: str | None = None
     github_oauth_client_secret: str | None = None
+    # A GitHub OAuth App only supports one registered callback URL, and
+    # login (/api/auth/oauth/github/callback) and repo-connect
+    # (/api/organizations/github/connect/callback) need different ones —
+    # so repo-connect uses a second, separate OAuth App. Falls back to the
+    # login app's credentials if unset, matching this repo's "unconfigured
+    # -> mock/inert" convention rather than hard-requiring a second app.
+    github_repo_oauth_client_id: str | None = None
+    github_repo_oauth_client_secret: str | None = None
 
     # Round 8 — Stripe subscription billing. Unset by default: billing
     # checkout/portal endpoints return 501 until configured.
