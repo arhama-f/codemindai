@@ -36,3 +36,5 @@ apps/web/blob-report/
 
 # Logs
 *.log
+.vercel
+.env*

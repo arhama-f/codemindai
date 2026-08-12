@@ -1,0 +1,23 @@
+# Vercel only needs apps/web + packages/api-client (its one npm workspace
+# dependency) to build. Everything else here is Python (unrelated to the npm
+# workspace graph) or this machine's iCloud-sync workaround symlinks
+# (node_modules/.venv/.next -> *.nosync, see docs) that Vercel's uploader
+# otherwise follows, blowing the file manifest past its 10MB request limit
+# (confirmed: node_modules/.venv alone are 100k+ files through the symlink).
+node_modules
+.venv
+.next
+*.nosync
+
+apps/api
+apps/worker
+fixtures
+
+packages/ai_orchestrator
+packages/analysis_engine
+packages/code_parser
+packages/embedding_provider
+packages/github_client
+packages/oauth_client
+packages/email_provider
+packages/shared_types

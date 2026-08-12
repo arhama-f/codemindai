@@ -43,6 +43,16 @@ export function SiteFooter() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <a
+                  href="https://www.psychflo.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Psychflo
+                </a>
+              </li>
             </ul>
           </div>
 
